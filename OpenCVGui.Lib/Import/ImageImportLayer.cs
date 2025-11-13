@@ -1,7 +1,7 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
 
-namespace OpenCVGui.Lib.Transform;
+namespace OpenCVGui.Lib.Import;
 
 /// <summary>
 /// Layer that imports an image from a file path. This is typically the first layer in a chain.

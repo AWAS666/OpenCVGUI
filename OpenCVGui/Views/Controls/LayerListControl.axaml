@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:OpenCVGui.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
+             x:Class="OpenCVGui.Views.Controls.LayerListControl"
+             x:DataType="vm:MainWindowViewModel">
+    <ListBox ItemsSource="{Binding Layers}"
+             SelectedItem="{Binding SelectedLayer}"
+             SelectionMode="Single">
+        <ListBox.ItemTemplate>
+            <DataTemplate>
+                <Border Padding="5"
+                        Margin="0,2">
+                    <Border.Styles>
+                        <Style Selector="Border:selected">
+                            <Setter Property="Background" Value="#3E3E3E"/>
+                        </Style>
+                    </Border.Styles>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <CheckBox Grid.Column="0" 
+                                  IsChecked="{Binding IsEnabled}"
+                                  Margin="0,0,5,0"
+                                  VerticalAlignment="Center"/>
+                        
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding DisplayName}" 
+                                       FontWeight="Bold"/>
+                            <TextBlock Text="{Binding LayerType}" 
+                                       FontSize="10" 
+                                       Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <TextBlock Grid.Column="2" 
+                                   Text="{Binding LastRuntime, StringFormat='{}{0}ms'}"
+                                   FontSize="10"
+                                   Foreground="Gray"
+                                   VerticalAlignment="Center"
+                                   Margin="5,0,0,0"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+</UserControl>
+

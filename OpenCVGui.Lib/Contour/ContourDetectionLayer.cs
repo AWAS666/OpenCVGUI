@@ -1,7 +1,7 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
 
-namespace OpenCVGui.Lib.Transform;
+namespace OpenCVGui.Lib.Contour;
 
 /// <summary>
 /// Layer that detects contours in an image and draws them on the output

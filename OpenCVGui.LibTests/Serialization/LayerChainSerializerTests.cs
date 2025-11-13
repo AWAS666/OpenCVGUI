@@ -3,6 +3,8 @@ using OpenCvSharp;
 using OpenCVGui.Lib;
 using OpenCVGui.Lib.Serialization;
 using OpenCVGui.Lib.Transform;
+using OpenCVGui.Lib.Import;
+using OpenCVGui.Lib.Contour;
 
 namespace OpenCVGui.Lib.Serialization.Tests
 {
