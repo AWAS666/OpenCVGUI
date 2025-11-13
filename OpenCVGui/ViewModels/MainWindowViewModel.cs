@@ -481,38 +481,62 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (files.Count > 0 && files[0].Path.IsFile)
         {
-            try
+            var filePath = files[0].Path.LocalPath;
+            await LoadChainFromFileAsync(filePath);
+        }
+    }
+    
+    /// <summary>
+    /// Loads a chain from a file path (used by both manual load and session restore)
+    /// </summary>
+    private async Task LoadChainFromFileAsync(string filePath)
+    {
+        try
+        {
+            var xml = await File.ReadAllTextAsync(filePath);
+            var chain = LayerChainSerializer.Deserialize(xml);
+            
+            // Replace current chain
+            StopStreaming();
+            _layerChain.Clear();
+            Layers.Clear();
+            
+            foreach (var layer in chain.Layers)
             {
-                var xml = await File.ReadAllTextAsync(files[0].Path.LocalPath);
-                var chain = LayerChainSerializer.Deserialize(xml);
-                
-                // Replace current chain
-                StopStreaming();
-                _layerChain.Clear();
-                Layers.Clear();
-                
-                foreach (var layer in chain.Layers)
-                {
-                    AddLayerToChain(layer, false);
-                }
-                
-                if (Layers.Count > 0)
-                {
-                    SelectedLayer = Layers[0];
-                }
-                
-                CheckAndUpdateStreaming();
-                
-                if (!IsStreamingActive)
-                {
-                    RenderChain();
-                }
+                AddLayerToChain(layer, false);
             }
-            catch (Exception ex)
+            
+            if (Layers.Count > 0)
             {
-                // TODO: Show error dialog
-                System.Diagnostics.Debug.WriteLine($"Error loading chain: {ex.Message}");
+                SelectedLayer = Layers[0];
             }
+            
+            // Save the loaded file path for session restore
+            SessionManager.SaveLastLoadedFile(filePath);
+            
+            CheckAndUpdateStreaming();
+            
+            if (!IsStreamingActive)
+            {
+                RenderChain();
+            }
+        }
+        catch (Exception ex)
+        {
+            // TODO: Show error dialog
+            System.Diagnostics.Debug.WriteLine($"Error loading chain: {ex.Message}");
+        }
+    }
+    
+    /// <summary>
+    /// Restores the last session by loading the last saved file if it exists
+    /// </summary>
+    public async Task RestoreLastSessionAsync()
+    {
+        var lastFile = SessionManager.GetLastLoadedFile();
+        if (lastFile != null)
+        {
+            await LoadChainFromFileAsync(lastFile);
         }
     }
 
