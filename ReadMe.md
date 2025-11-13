@@ -1,10 +1,7 @@
 ## Todo
-shortcuts
 auto code gen
-restore session
-save startup pos
-split view and process image
 translations
+drag and drop of layers
 
 ## layer
 - binary threshold
