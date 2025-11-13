@@ -18,13 +18,28 @@
         <Border Grid.Row="0"
                 Background="#1E1E1E" 
                 BorderBrush="#3E3E3E" 
-                BorderThickness="1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                BorderThickness="1"
+                x:Name="ImageContainer">
+            <ScrollViewer x:Name="ImageScrollViewer"
+                          HorizontalScrollBarVisibility="Auto" 
                           VerticalScrollBarVisibility="Auto">
-                <Image Source="{Binding DisplayImage}" 
-                       Stretch="None"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
+                <Border x:Name="ImageBorder"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <Image x:Name="DisplayImageControl"
+                           Source="{Binding DisplayImage}" 
+                           Stretch="None"
+                           RenderTransformOrigin="0.5,0.5">
+                        <Image.RenderTransform>
+                            <TransformGroup>
+                                <ScaleTransform ScaleX="{Binding ZoomLevel}" 
+                                               ScaleY="{Binding ZoomLevel}"/>
+                                <TranslateTransform X="{Binding PanX}" 
+                                                   Y="{Binding PanY}"/>
+                            </TransformGroup>
+                        </Image.RenderTransform>
+                    </Image>
+                </Border>
             </ScrollViewer>
         </Border>
         
@@ -87,7 +102,47 @@
                                            Height="20"/>
                 </Button>
                 
-                <!-- Future: Zoom controls can be added here -->
+                <!-- Zoom Out Button -->
+                <Button Command="{Binding ZoomOutCommand}"
+                        ToolTip.Tip="Zoom Out"
+                        Padding="8">
+                    <Button.IsEnabled>
+                        <Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+                    </Button.IsEnabled>
+                    <lucideAvalonia:Lucide Icon="ZoomOut" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
+                <!-- Fit to View Button -->
+                <Button Command="{Binding FitToViewCommand}"
+                        ToolTip.Tip="Fit to View"
+                        Padding="8">
+                    <Button.IsEnabled>
+                        <Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+                    </Button.IsEnabled>
+                    <lucideAvalonia:Lucide Icon="Maximize2" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
+                <!-- Zoom In Button -->
+                <Button Command="{Binding ZoomInCommand}"
+                        ToolTip.Tip="Zoom In"
+                        Padding="8">
+                    <Button.IsEnabled>
+                        <Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+                    </Button.IsEnabled>
+                    <lucideAvalonia:Lucide Icon="ZoomIn" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
             </StackPanel>
         </Border>
     </Grid>

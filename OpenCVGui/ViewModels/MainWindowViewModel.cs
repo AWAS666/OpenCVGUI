@@ -63,6 +63,100 @@ public partial class MainWindowViewModel : ViewModelBase
             return Layers.Sum(layer => layer.LastRuntime);
         }
     }
+    
+    [ObservableProperty]
+    private double _zoomLevel = 1.0;
+    
+    [ObservableProperty]
+    private double _panX = 0.0;
+    
+    [ObservableProperty]
+    private double _panY = 0.0;
+    
+    private const double MinZoom = 0.1;
+    private const double MaxZoom = 10.0;
+    private const double ZoomStep = 0.1;
+
+    [RelayCommand]
+    private void ZoomIn()
+    {
+        ZoomLevel = Math.Min(MaxZoom, ZoomLevel + ZoomStep);
+    }
+    
+    [RelayCommand]
+    private void ZoomOut()
+    {
+        ZoomLevel = Math.Max(MinZoom, ZoomLevel - ZoomStep);
+    }
+    
+    [RelayCommand]
+    private void FitToView()
+    {
+        if (DisplayImage == null)
+            return;
+            
+        // Reset zoom and pan to fit image
+        ZoomLevel = 1.0;
+        PanX = 0.0;
+        PanY = 0.0;
+        OnPropertyChanged(nameof(ZoomLevel));
+        OnPropertyChanged(nameof(PanX));
+        OnPropertyChanged(nameof(PanY));
+    }
+    
+    partial void OnDisplayImageChanged(Bitmap? value)
+    {
+        // Don't reset zoom on image change - preserve user's zoom level
+        // Only reset if this is the first image (zoom is still at default 1.0)
+        if (value != null && ZoomLevel == 1.0 && PanX == 0.0 && PanY == 0.0)
+        {
+            // This is likely the first image, so fit to view is fine
+            // But don't do it automatically - let user control it
+        }
+    }
+    
+    public void ZoomAtPoint(double delta, double x, double y)
+    {
+        if (DisplayImage == null)
+            return;
+            
+        var oldZoom = ZoomLevel;
+        var zoomDelta = delta * ZoomStep * 0.5; // Make wheel zoom smoother
+        var newZoom = Math.Max(MinZoom, Math.Min(MaxZoom, ZoomLevel + zoomDelta));
+        
+        if (Math.Abs(newZoom - oldZoom) < 0.001)
+            return;
+            
+        // x and y are relative to the image control (before transform)
+        // We need to account for the current zoom and pan to find the point in image space
+        var imageWidth = DisplayImage.PixelSize.Width;
+        var imageHeight = DisplayImage.PixelSize.Height;
+        
+        // Convert mouse position from image control coordinates to image space
+        // Image control is centered, so we need to account for that
+        var imageSpaceX = x - imageWidth / 2.0;
+        var imageSpaceY = y - imageHeight / 2.0;
+        
+        // Calculate zoom factor
+        var zoomFactor = newZoom / oldZoom;
+        
+        // Adjust pan to keep the point under the mouse cursor fixed
+        PanX = imageSpaceX - (imageSpaceX - PanX) * zoomFactor;
+        PanY = imageSpaceY - (imageSpaceY - PanY) * zoomFactor;
+        
+        ZoomLevel = newZoom;
+        OnPropertyChanged(nameof(ZoomLevel));
+        OnPropertyChanged(nameof(PanX));
+        OnPropertyChanged(nameof(PanY));
+    }
+    
+    public void PanImage(double deltaX, double deltaY)
+    {
+        PanX += deltaX;
+        PanY += deltaY;
+        OnPropertyChanged(nameof(PanX));
+        OnPropertyChanged(nameof(PanY));
+    }
 
     [ObservableProperty]
     private bool _isStreamingPaused = false;
