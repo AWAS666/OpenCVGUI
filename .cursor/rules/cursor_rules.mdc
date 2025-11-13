@@ -130,11 +130,38 @@ This is an OpenCV-based image processing application built with Avalonia UI. The
 - Use `CancellationToken` for cancellable operations
 - Use locks for thread-safe state access
 
+### Command State Management
+- Use `CanExecute` property with `[RelayCommand(CanExecute = nameof(CanExecuteProperty))]`
+- Call `Command.NotifyCanExecuteChanged()` when command dependencies change
+- Update command state in property change handlers (e.g., `OnSelectedLayerChanged`)
+- Update command state after operations that affect dependencies (e.g., after deletion)
+
+### Focus Management
+- When programmatically changing selections, ensure the control maintains focus for keyboard shortcuts
+- Use `Control.Focus()` on UI thread after selection changes
+- Place `KeyBindings` on the control that needs focus (not parent containers)
+- Subscribe to property changes in `DataContextChanged` handler for proper initialization
+
 ## File Naming Conventions
 - Views: `*View.axaml` / `*View.axaml.cs`
 - ViewModels: `*ViewModel.cs`
 - Layers: `*Layer.cs`
 - Controls: `*Control.axaml` / `*Control.axaml.cs`
+
+### Code Comments
+- **Avoid redundant comments** that simply restate what the code does
+- **Don't comment obvious code** - if the code is self-explanatory, no comment is needed
+- **Don't reference removed code** - remove comments that describe functionality that no longer exists
+- **Don't comment implementation details** that are likely to change
+- Comments should explain **why**, not **what** - the code already shows what it does
+- Only add comments for non-obvious business logic, complex algorithms, or important constraints
+
+### Testing and Verification
+- **Always compile code** before assuming it works - use `dotnet build` to verify
+- **Test Avalonia-specific APIs** - don't assume API usage without verification
+- **Check for lint errors** after making changes using `read_lints`
+- **Verify focus behavior** when implementing keyboard shortcuts
+- **Test command state** when dependencies change programmatically
 
 ## Important Notes
 
@@ -145,3 +172,6 @@ This is an OpenCV-based image processing application built with Avalonia UI. The
 5. **Session Management**: Application persists last loaded file path
 6. **Streaming**: Video/webcam layers support streaming with pause/step controls
 7. **Render Modes**: UI mode shows visualizations, Chain mode is processing-only
+8. **Avalonia APIs**: Use correct Avalonia APIs - `DataTransfer` not `DataObject`, `Gesture` not `Key` for KeyBinding
+9. **Command Updates**: Always notify command state changes when dependencies change
+10. **Focus Management**: Maintain focus on controls that need keyboard input after programmatic changes
