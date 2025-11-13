@@ -43,6 +43,10 @@
 									<local:ParameterEditorTemplateSelector/>
 								</ContentControl.ContentTemplate>
 							</ContentControl>
+							<Border Height="1"
+									Background="#E0E0E0"
+									Margin="0,10,0,0">								
+							</Border>
 						</StackPanel>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>

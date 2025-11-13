@@ -2,6 +2,7 @@
 auto code gen
 restore session
 save startup pos
+split view and process image
 
 ## layer
 - binary threshold

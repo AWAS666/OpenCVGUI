@@ -6,7 +6,7 @@
 			 mc:Ignorable="d"
 			 x:Class="OpenCVGui.Views.Controls.ParameterEditors.SliderParameterEditor"
 			 x:DataType="vm:ParameterProperty">
-	<StackPanel Orientation="Vertical" Spacing="10">
+	<StackPanel Orientation="Vertical" Spacing="5">
 		<Slider Minimum="{Binding RangeAttribute.Minimum}"
 				Maximum="{Binding RangeAttribute.Maximum}"
 				Value="{Binding Value, Mode=TwoWay}"
