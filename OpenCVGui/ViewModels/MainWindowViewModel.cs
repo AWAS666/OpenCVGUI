@@ -54,6 +54,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ParameterProperty? _targetCropParameter;
 
+    [ObservableProperty]
+    private ObservableCollection<string> _errorLog = new();
+
+    [ObservableProperty]
+    private bool _hasErrors;
+
     public bool IsUIRenderMode => RenderMode == RenderMode.UI;
     
     public bool IsChainRenderMode => RenderMode == RenderMode.Chain;
@@ -967,6 +973,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // This prevents race conditions when switching modes during streaming
             var currentRenderMode = RenderMode;
             Mat? result = null;
+            var errors = new List<string>();
 
             if (SelectedLayer != null)
             {
@@ -986,6 +993,15 @@ public partial class MainWindowViewModel : ViewModelBase
                 result = _layerChain.RenderChain(_sourceImage, currentRenderMode);
             }
 
+            // Collect errors from layers
+            foreach (var layer in Layers)
+            {
+                if (layer.Layer.LastError != null)
+                {
+                    errors.Add(layer.Layer.LastError);
+                }
+            }
+
             var bitmap = ImageConverter.MatToBitmapSafe(result);
             
             // Update UI on main thread
@@ -1002,6 +1018,14 @@ public partial class MainWindowViewModel : ViewModelBase
                 
                 // Update total runtime
                 OnPropertyChanged(nameof(TotalRuntime));
+
+                // Update error log
+                ErrorLog.Clear();
+                foreach (var error in errors)
+                {
+                    ErrorLog.Add(error);
+                }
+                HasErrors = ErrorLog.Count > 0;
             });
 
             result?.Dispose();
@@ -1009,6 +1033,12 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error rendering: {ex.Message}");
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                ErrorLog.Clear();
+                ErrorLog.Add($"Rendering error: {ex.Message}");
+                HasErrors = true;
+            });
         }
     }
 

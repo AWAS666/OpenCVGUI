@@ -47,8 +47,70 @@ public abstract class BaseLayer
         }
 
         var watch = Stopwatch.StartNew();
-        var result = RenderInternal(input, renderMode, chainInput);
-        LastRuntime = watch.Elapsed.TotalMilliseconds;
-        return result;
+        const int timeoutSeconds = 5;
+        
+        try
+        {
+            Mat? result = null;
+            Exception? renderException = null;
+            var renderCompleted = new System.Threading.ManualResetEventSlim(false);
+            
+            // Run render in a separate task with timeout
+            var renderTask = Task.Run(() =>
+            {
+                try
+                {
+                    result = RenderInternal(input, renderMode, chainInput);
+                }
+                catch (Exception ex)
+                {
+                    renderException = ex;
+                }
+                finally
+                {
+                    renderCompleted.Set();
+                }
+            });
+
+            // Wait for completion or timeout
+            if (renderCompleted.Wait(TimeSpan.FromSeconds(timeoutSeconds)))
+            {
+                // Render completed
+                if (renderException != null)
+                {
+                    throw renderException;
+                }
+                
+                LastRuntime = watch.Elapsed.TotalMilliseconds;
+                LastError = null;
+                return result ?? (input?.Clone() ?? new Mat());
+            }
+            else
+            {
+                // Timeout occurred
+                LastRuntime = watch.Elapsed.TotalMilliseconds;
+                var layerName = string.IsNullOrEmpty(Name) ? GetLayerType() : $"{GetLayerType()} ({Name})";
+                LastError = $"{layerName}: Processing timeout after {timeoutSeconds} seconds";
+                System.Diagnostics.Debug.WriteLine($"Layer timeout: {LastError}");
+                
+                // Return input or empty mat to continue chain
+                return input?.Clone() ?? new Mat();
+            }
+        }
+        catch (Exception ex)
+        {
+            LastRuntime = watch.Elapsed.TotalMilliseconds;
+            LastError = $"{GetLayerType()}{(string.IsNullOrEmpty(Name) ? "" : $" ({Name})")}: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"Layer error: {LastError}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            
+            // Return input or empty mat to continue chain
+            return input?.Clone() ?? new Mat();
+        }
     }
+
+    /// <summary>
+    /// Last error message from rendering (null if no error)
+    /// </summary>
+    public string? LastError { get; private set; }
 }

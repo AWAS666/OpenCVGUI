@@ -63,9 +63,63 @@
                 BorderBrush="#3E3E3E"
                 BorderThickness="1,0,1,1"
                 Padding="5">
-            <StackPanel Orientation="Horizontal" 
-                        HorizontalAlignment="Right"
-                        Spacing="5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <!-- Status Area (Left) -->
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal" 
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                    <!-- Loading Indicator -->
+                    <StackPanel Orientation="Horizontal" 
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsRendering}">
+                        <ProgressBar IsIndeterminate="True"
+                                     Width="14"
+                                     Height="14"
+                                     VerticalAlignment="Center"/>
+                        <TextBlock Text="Processing..."
+                                   FontSize="10"
+                                   Foreground="#888888"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    
+                    <!-- Error Indicator -->
+                    <StackPanel Orientation="Horizontal" 
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding HasErrors}">
+                        <TextBlock Text="⚠"
+                                   FontSize="12"
+                                   Foreground="#FF4444"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ErrorLog.Count, StringFormat='{}{0} error(s)'}"
+                                   FontSize="10"
+                                   Foreground="#FF8888"
+                                   VerticalAlignment="Center"
+                                   Cursor="Hand">
+                            <ToolTip.Tip>
+                                <ItemsControl ItemsSource="{Binding ErrorLog}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,2"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ToolTip.Tip>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+                
+                <!-- Toolbar Buttons (Right) -->
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal" 
+                            Spacing="5">
                 <!-- Crop Apply Button -->
                 <Button Command="{Binding ApplyCropCommand}"
                         ToolTip.Tip="Apply Crop"
@@ -181,7 +235,8 @@
                                            Width="20" 
                                            Height="20"/>
                 </Button>
-            </StackPanel>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

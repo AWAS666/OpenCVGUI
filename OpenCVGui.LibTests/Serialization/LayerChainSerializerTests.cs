@@ -189,9 +189,6 @@ namespace OpenCVGui.Lib.Serialization.Tests
                 MinArea = 150.0,
                 MaxArea = 5000.0,
                 DrawOnOriginal = false,
-                ContourColorB = 255,
-                ContourColorG = 0,
-                ContourColorR = 0,
                 LineThickness = 3,
                 RetrievalMode = RetrievalModes.List,
                 ApproximationMode = ContourApproximationModes.ApproxNone
@@ -207,9 +204,6 @@ namespace OpenCVGui.Lib.Serialization.Tests
             Assert.AreEqual(contourLayer.MinArea, deserializedContour.MinArea);
             Assert.AreEqual(contourLayer.MaxArea, deserializedContour.MaxArea);
             Assert.AreEqual(contourLayer.DrawOnOriginal, deserializedContour.DrawOnOriginal);
-            Assert.AreEqual(contourLayer.ContourColorB, deserializedContour.ContourColorB);
-            Assert.AreEqual(contourLayer.ContourColorG, deserializedContour.ContourColorG);
-            Assert.AreEqual(contourLayer.ContourColorR, deserializedContour.ContourColorR);
             Assert.AreEqual(contourLayer.LineThickness, deserializedContour.LineThickness);
             Assert.AreEqual(contourLayer.RetrievalMode, deserializedContour.RetrievalMode);
             Assert.AreEqual(contourLayer.ApproximationMode, deserializedContour.ApproximationMode);

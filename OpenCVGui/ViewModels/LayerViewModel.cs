@@ -52,6 +52,8 @@ public partial class LayerViewModel : ViewModelBase
 
     public double LastRuntime => Math.Round(_layer.LastRuntime, 2);
 
+    public bool HasError => !string.IsNullOrEmpty(_layer.LastError);
+
     public ObservableCollection<ParameterProperty> Parameters { get; } = new();
 
     public LayerViewModel(BaseLayer layer)
@@ -97,6 +99,7 @@ public partial class LayerViewModel : ViewModelBase
     public void RefreshRuntime()
     {
         OnPropertyChanged(nameof(LastRuntime));
+        OnPropertyChanged(nameof(HasError));
     }
 }
 

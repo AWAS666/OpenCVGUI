@@ -92,7 +92,19 @@ public class LayerChain
         {
             if (layer.IsEnabled)
             {
-                current = layer.Render(current, renderMode);
+                try
+                {
+                    current = layer.Render(current, renderMode);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error in layer {layer.GetLayerType()}: {ex.Message}");
+                    // Continue with current output or empty mat
+                    if (current == null || current.Empty())
+                    {
+                        current = new Mat();
+                    }
+                }
             }
         }
 
@@ -129,13 +141,24 @@ public class LayerChain
                     var layer = _layers[i];
                     if (layer.IsEnabled)
                     {
-                        var newChainOutput = layer.Render(chainOutput, RenderMode.Chain);
-                        // Track intermediate results for disposal (but not inputImage)
-                        if (chainOutput != inputImage && chainOutput != null)
+                        try
                         {
-                            intermediateMats.Add(chainOutput);
+                            var newChainOutput = layer.Render(chainOutput, RenderMode.Chain);
+                            // Track intermediate results for disposal (but not inputImage)
+                            if (chainOutput != inputImage && chainOutput != null)
+                            {
+                                intermediateMats.Add(chainOutput);
+                            }
+                            chainOutput = newChainOutput;
                         }
-                        chainOutput = newChainOutput;
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error in layer {layer.GetLayerType()}: {ex.Message}");
+                            if (chainOutput == null || chainOutput.Empty())
+                            {
+                                chainOutput = new Mat();
+                            }
+                        }
                     }
                 }
 
@@ -145,13 +168,24 @@ public class LayerChain
                     var layer = _layers[i];
                     if (layer.IsEnabled)
                     {
-                        var newUiOutput = layer.Render(uiOutput, RenderMode.UI);
-                        // Track intermediate results for disposal (but not inputImage)
-                        if (uiOutput != inputImage && uiOutput != null)
+                        try
                         {
-                            intermediateMats.Add(uiOutput);
+                            var newUiOutput = layer.Render(uiOutput, RenderMode.UI);
+                            // Track intermediate results for disposal (but not inputImage)
+                            if (uiOutput != inputImage && uiOutput != null)
+                            {
+                                intermediateMats.Add(uiOutput);
+                            }
+                            uiOutput = newUiOutput;
                         }
-                        uiOutput = newUiOutput;
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Error in layer {layer.GetLayerType()}: {ex.Message}");
+                            if (uiOutput == null || uiOutput.Empty())
+                            {
+                                uiOutput = new Mat();
+                            }
+                        }
                     }
                 }
 
@@ -160,9 +194,17 @@ public class LayerChain
                 var currentLayer = _layers[layerIndex];
                 if (currentLayer.IsEnabled)
                 {
-                    // Pass uiOutput as the main input (for visualization/drawing)
-                    // and chainOutput as chainInput (for processing)
-                    result = currentLayer.Render(uiOutput, RenderMode.UI, chainOutput);
+                    try
+                    {
+                        // Pass uiOutput as the main input (for visualization/drawing)
+                        // and chainOutput as chainInput (for processing)
+                        result = currentLayer.Render(uiOutput, RenderMode.UI, chainOutput);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error in layer {currentLayer.GetLayerType()}: {ex.Message}");
+                        result = uiOutput?.Clone() ?? new Mat();
+                    }
                 }
                 else
                 {
@@ -226,7 +268,18 @@ public class LayerChain
                 var layer = _layers[i];
                 if (layer.IsEnabled)
                 {
-                    current = layer.Render(current, RenderMode.Chain);
+                    try
+                    {
+                        current = layer.Render(current, RenderMode.Chain);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error in layer {layer.GetLayerType()}: {ex.Message}");
+                        if (current == null || current.Empty())
+                        {
+                            current = new Mat();
+                        }
+                    }
                 }
             }
 
