@@ -6,6 +6,7 @@
 			 xmlns:converters="using:Avalonia.Data.Converters"
 			 mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
 			 xmlns:lucideAvalonia="clr-namespace:LucideAvalonia;assembly=LucideAvalonia"
+			 xmlns:local="using:OpenCVGui.Views.Controls"
 			 x:Class="OpenCVGui.Views.Controls.ParameterEditorControl"
 			 x:DataType="vm:MainWindowViewModel">
 	<StackPanel>
@@ -37,51 +38,11 @@
 									   Margin="0,0,0,5"
 									   TextWrapping="Wrap"/>
 
-							<!-- Numeric with range - Slider -->
-							<StackPanel>
-								<Slider Minimum="{Binding RangeAttribute.Minimum}"
-										Maximum="{Binding RangeAttribute.Maximum}"
-										Value="{Binding Value, Mode=TwoWay}"
-										TickFrequency="{Binding RangeAttribute.Step}"
-										IsSnapToTickEnabled="True">
-									<Slider.IsVisible>
-										<Binding Path="RangeAttribute" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
-									</Slider.IsVisible>
-								</Slider>
-								<TextBlock Text="{Binding Value, StringFormat='Value: {0}'}"
-										   FontSize="10"
-										   Foreground="Gray"
-										   Margin="0,2,0,0">
-									<TextBlock.IsVisible>
-										<Binding Path="RangeAttribute" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
-									</TextBlock.IsVisible>
-								</TextBlock>
-							</StackPanel>
-
-							<!-- Numeric without range - NumericUpDown -->
-							<NumericUpDown Value="{Binding Value, Mode=TwoWay}"
-										   IsVisible="{Binding IsNumeric}"/>
-
-							<!-- Boolean - CheckBox -->
-							<CheckBox IsChecked="{Binding Value}"
-									  IsVisible="{Binding IsBoolean}"/>
-
-							<!-- Enum - ComboBox -->
-							<ComboBox ItemsSource="{Binding EnumValues}"
-									  SelectedItem="{Binding Value}"
-									  IsVisible="{Binding IsEnum}"/>
-
-							<!-- Color - ColorPicker with Hex TextBox -->
-							<StackPanel IsVisible="{Binding IsColor}">
-								<ColorPicker Color="{Binding ColorValue, Mode=TwoWay}"
-											 Margin="0,0,0,5"/>
-								<TextBox Text="{Binding Value, Mode=TwoWay}"
-										 Watermark="Hex color (e.g., #FF0000)"/>
-							</StackPanel>
-
-							<!-- String - TextBox (not color) -->
-							<TextBox Text="{Binding Value}"
-									 IsVisible="{Binding IsStringNotColor}"/>
+							<ContentControl Content="{Binding}">
+								<ContentControl.ContentTemplate>
+									<local:ParameterEditorTemplateSelector/>
+								</ContentControl.ContentTemplate>
+							</ContentControl>
 						</StackPanel>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>

@@ -128,6 +128,26 @@ public partial class ParameterProperty : ObservableObject
 
     public bool IsStringNotColor => IsString && !IsColor;
 
+    public string EditorType
+    {
+        get
+        {
+            if (RangeAttribute != null && IsNumeric)
+                return "Slider";
+            if (IsColor)
+                return "Color";
+            if (IsEnum)
+                return "Enum";
+            if (IsBoolean)
+                return "Boolean";
+            if (IsNumeric)
+                return "Numeric";
+            if (IsStringNotColor)
+                return "String";
+            return "String";
+        }
+    }
+
     public Array GetEnumValues()
     {
         if (!IsEnum)
