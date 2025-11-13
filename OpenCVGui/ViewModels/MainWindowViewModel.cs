@@ -21,7 +21,6 @@ namespace OpenCVGui.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly LayerChain _layerChain = new();
-    private readonly RenderCache _renderCache = new();
     private Mat? _sourceImage;
     private CancellationTokenSource? _streamingCancellationTokenSource;
     private Task? _streamingTask;
