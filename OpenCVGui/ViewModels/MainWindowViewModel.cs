@@ -417,6 +417,7 @@ public partial class MainWindowViewModel : ViewModelBase
         UpdateFileParameterVisibility();
         RenderChain();
         RemoveLayerCommand.NotifyCanExecuteChanged();
+        ResetLayerToDefaultsCommand.NotifyCanExecuteChanged();
     }
 
     private void UpdateFileParameterVisibility()
@@ -674,6 +675,84 @@ public partial class MainWindowViewModel : ViewModelBase
                 _layerChain.MoveLayer(index, index - 1);
                 Layers.Move(index, index - 1);
                 RenderChain();
+            }
+        }
+    }
+
+    public bool CanResetLayerToDefaults => SelectedLayer != null;
+
+    [RelayCommand(CanExecute = nameof(CanResetLayerToDefaults))]
+    private void ResetLayerToDefaults()
+    {
+        if (SelectedLayer != null)
+        {
+            var index = Layers.IndexOf(SelectedLayer);
+            if (index >= 0)
+            {
+                // Get the layer type
+                var layerType = SelectedLayer.Layer.GetLayerType();
+                
+                // Preserve the layer name and enabled state
+                var oldName = SelectedLayer.Layer.Name;
+                var oldEnabled = SelectedLayer.Layer.IsEnabled;
+                
+                // Create a new instance with default values
+                var newLayer = LayerFactory.CreateLayer(layerType);
+                newLayer.Name = oldName;
+                newLayer.IsEnabled = oldEnabled;
+                
+                // Replace in layer chain
+                _layerChain.RemoveLayerAt(index);
+                _layerChain.InsertLayer(index, newLayer);
+                
+                // Replace in Layers collection
+                var newLayerViewModel = new LayerViewModel(newLayer);
+                
+                // Subscribe to parameter changes
+                foreach (var param in newLayerViewModel.Parameters)
+                {
+                    param.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(ParameterProperty.Value))
+                        {
+                            CheckAndUpdateStreaming();
+                            if (!IsStreamingActive)
+                            {
+                                RenderChain();
+                            }
+                        }
+                    };
+                }
+                
+                // Update file parameter visibility when parameters change
+                newLayerViewModel.Parameters.CollectionChanged += (s, e) =>
+                {
+                    UpdateFileParameterVisibility();
+                };
+                
+                // Subscribe to enabled changes
+                newLayerViewModel.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(LayerViewModel.IsEnabled))
+                    {
+                        CheckAndUpdateStreaming();
+                        if (!IsStreamingActive)
+                        {
+                            RenderChain();
+                        }
+                    }
+                };
+                
+                Layers[index] = newLayerViewModel;
+                SelectedLayer = newLayerViewModel;
+                
+                UpdateFileParameterVisibility();
+                CheckAndUpdateStreaming();
+                
+                if (!IsStreamingActive)
+                {
+                    RenderChain();
+                }
             }
         }
     }

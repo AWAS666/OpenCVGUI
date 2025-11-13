@@ -10,6 +10,18 @@
 			 x:Class="OpenCVGui.Views.Controls.ParameterEditorControl"
 			 x:DataType="vm:MainWindowViewModel">
 	<StackPanel>
+		<!-- Reset to Defaults Button -->
+		<Button Command="{Binding ResetLayerToDefaultsCommand}"
+				HorizontalAlignment="Stretch"
+				HorizontalContentAlignment="Center"
+				Padding="10,5"
+				Margin="0,0,0,10">
+			<StackPanel Orientation="Horizontal" Spacing="10">
+				<lucideAvalonia:Lucide Icon="RotateCcw" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
+				<TextBlock VerticalAlignment="Center">Reset to Defaults</TextBlock>
+			</StackPanel>
+		</Button>
+
 		<!-- Load Image Button (shown only if layer has file parameter) -->
 		<Button                 Command="{Binding LoadImageCommand}"
 								HorizontalAlignment="Stretch"
