@@ -80,3 +80,11 @@ public class ParameterFileAttribute : Attribute
     public bool AllowMultiple { get; set; } = false;
 }
 
+/// <summary>
+/// Marks a property as a color property that should use a ColorPicker in the UI
+/// </summary>
+[AttributeUsage(AttributeTargets.Property)]
+public class ParameterColorAttribute : Attribute
+{
+}
+

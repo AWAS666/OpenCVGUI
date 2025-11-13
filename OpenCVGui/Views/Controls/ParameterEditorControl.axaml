@@ -41,7 +41,7 @@
 							<StackPanel>
 								<Slider Minimum="{Binding RangeAttribute.Minimum}"
 										Maximum="{Binding RangeAttribute.Maximum}"
-										Value="{Binding Value}"
+										Value="{Binding Value, Mode=TwoWay}"
 										TickFrequency="{Binding RangeAttribute.Step}"
 										IsSnapToTickEnabled="True">
 									<Slider.IsVisible>
@@ -59,7 +59,7 @@
 							</StackPanel>
 
 							<!-- Numeric without range - NumericUpDown -->
-							<NumericUpDown Value="{Binding Value}"
+							<NumericUpDown Value="{Binding Value, Mode=TwoWay}"
 										   IsVisible="{Binding IsNumeric}"/>
 
 							<!-- Boolean - CheckBox -->
@@ -71,9 +71,17 @@
 									  SelectedItem="{Binding Value}"
 									  IsVisible="{Binding IsEnum}"/>
 
-							<!-- String - TextBox -->
+							<!-- Color - ColorPicker with Hex TextBox -->
+							<StackPanel IsVisible="{Binding IsColor}">
+								<ColorPicker Color="{Binding ColorValue, Mode=TwoWay}"
+											 Margin="0,0,0,5"/>
+								<TextBox Text="{Binding Value, Mode=TwoWay}"
+										 Watermark="Hex color (e.g., #FF0000)"/>
+							</StackPanel>
+
+							<!-- String - TextBox (not color) -->
 							<TextBox Text="{Binding Value}"
-									 IsVisible="{Binding IsString}"/>
+									 IsVisible="{Binding IsStringNotColor}"/>
 						</StackPanel>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
