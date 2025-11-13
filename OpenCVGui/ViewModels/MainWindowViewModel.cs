@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using OpenCVGui.Lib;
 using OpenCVGui.Lib.Serialization;
+using OpenCVGui.Services;
 using OpenCVGui.Utils;
 using OpenCvSharp;
 using System;
@@ -21,6 +22,9 @@ namespace OpenCVGui.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly LayerChain _layerChain = new();
+    private readonly IFileDialogService _fileDialogService;
+    private readonly ImageViewportService _viewportService;
+    private readonly CropService _cropService;
     private Mat? _sourceImage;
     private CancellationTokenSource? _streamingCancellationTokenSource;
     private Task? _streamingTask;
@@ -42,6 +46,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _hasFileParameter;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUIRenderMode))]
+    [NotifyPropertyChangedFor(nameof(IsChainRenderMode))]
+    [NotifyPropertyChangedFor(nameof(UIRenderModeIconColor))]
+    [NotifyPropertyChangedFor(nameof(ChainRenderModeIconColor))]
     private RenderMode _renderMode = RenderMode.UI;
 
     [ObservableProperty]
@@ -78,29 +86,36 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
     
-    [ObservableProperty]
-    private double _zoomLevel = 1.0;
+    public double ZoomLevel
+    {
+        get => _viewportService.ZoomLevel;
+        set => _viewportService.ZoomLevel = value;
+    }
     
-    [ObservableProperty]
-    private double _panX = 0.0;
+    public double PanX
+    {
+        get => _viewportService.PanX;
+        set => _viewportService.PanX = value;
+    }
     
-    [ObservableProperty]
-    private double _panY = 0.0;
-    
-    private const double MinZoom = 0.1;
-    private const double MaxZoom = 10.0;
-    private const double ZoomStep = 0.1;
+    public double PanY
+    {
+        get => _viewportService.PanY;
+        set => _viewportService.PanY = value;
+    }
 
     [RelayCommand]
     private void ZoomIn()
     {
-        ZoomLevel = Math.Min(MaxZoom, ZoomLevel + ZoomStep);
+        _viewportService.ZoomIn();
+        OnPropertyChanged(nameof(ZoomLevel));
     }
     
     [RelayCommand]
     private void ZoomOut()
     {
-        ZoomLevel = Math.Max(MinZoom, ZoomLevel - ZoomStep);
+        _viewportService.ZoomOut();
+        OnPropertyChanged(nameof(ZoomLevel));
     }
     
     [RelayCommand]
@@ -109,24 +124,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (DisplayImage == null)
             return;
             
-        // Reset zoom and pan to fit image
-        ZoomLevel = 1.0;
-        PanX = 0.0;
-        PanY = 0.0;
+        _viewportService.FitToView();
         OnPropertyChanged(nameof(ZoomLevel));
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
-    }
-    
-    partial void OnDisplayImageChanged(Bitmap? value)
-    {
-        // Don't reset zoom on image change - preserve user's zoom level
-        // Only reset if this is the first image (zoom is still at default 1.0)
-        if (value != null && ZoomLevel == 1.0 && PanX == 0.0 && PanY == 0.0)
-        {
-            // This is likely the first image, so fit to view is fine
-            // But don't do it automatically - let user control it
-        }
     }
     
     public void ZoomAtPoint(double delta, double x, double y)
@@ -135,44 +136,28 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
             
         var oldZoom = ZoomLevel;
-        var zoomDelta = delta * ZoomStep * 0.5; // Make wheel zoom smoother
-        var newZoom = Math.Max(MinZoom, Math.Min(MaxZoom, ZoomLevel + zoomDelta));
+        _viewportService.ZoomAtPoint(delta, x, y, DisplayImage);
         
-        if (Math.Abs(newZoom - oldZoom) < 0.001)
-            return;
-            
-        // x and y are relative to the image control (before transform)
-        // We need to account for the current zoom and pan to find the point in image space
-        var imageWidth = DisplayImage.PixelSize.Width;
-        var imageHeight = DisplayImage.PixelSize.Height;
-        
-        // Convert mouse position from image control coordinates to image space
-        // Image control is centered, so we need to account for that
-        var imageSpaceX = x - imageWidth / 2.0;
-        var imageSpaceY = y - imageHeight / 2.0;
-        
-        // Calculate zoom factor
-        var zoomFactor = newZoom / oldZoom;
-        
-        // Adjust pan to keep the point under the mouse cursor fixed
-        PanX = imageSpaceX - (imageSpaceX - PanX) * zoomFactor;
-        PanY = imageSpaceY - (imageSpaceY - PanY) * zoomFactor;
-        
-        ZoomLevel = newZoom;
-        OnPropertyChanged(nameof(ZoomLevel));
-        OnPropertyChanged(nameof(PanX));
-        OnPropertyChanged(nameof(PanY));
+        if (Math.Abs(ZoomLevel - oldZoom) > 0.001)
+        {
+            OnPropertyChanged(nameof(ZoomLevel));
+            OnPropertyChanged(nameof(PanX));
+            OnPropertyChanged(nameof(PanY));
+        }
     }
     
     public void PanImage(double deltaX, double deltaY)
     {
-        PanX += deltaX;
-        PanY += deltaY;
+        _viewportService.PanImage(deltaX, deltaY);
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStreamingPlaying))]
+    [NotifyPropertyChangedFor(nameof(PauseButtonIcon))]
+    [NotifyPropertyChangedFor(nameof(PauseButtonTooltip))]
+    [NotifyPropertyChangedFor(nameof(CanStepFrames))]
     private bool _isStreamingPaused = false;
 
     public bool IsStreamingPlaying => !IsStreamingPaused;
@@ -185,19 +170,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnRenderModeChanged(RenderMode value)
     {
-        OnPropertyChanged(nameof(IsUIRenderMode));
-        OnPropertyChanged(nameof(IsChainRenderMode));
-        OnPropertyChanged(nameof(UIRenderModeIconColor));
-        OnPropertyChanged(nameof(ChainRenderModeIconColor));
         RenderChain();
     }
     
     partial void OnIsStreamingPausedChanged(bool value)
     {
-        OnPropertyChanged(nameof(IsStreamingPlaying));
-        OnPropertyChanged(nameof(PauseButtonIcon));
-        OnPropertyChanged(nameof(PauseButtonTooltip));
-        OnPropertyChanged(nameof(CanStepFrames));
         StepFrameForwardCommand.NotifyCanExecuteChanged();
         StepFrameBackwardCommand.NotifyCanExecuteChanged();
     }
@@ -239,7 +216,6 @@ public partial class MainWindowViewModel : ViewModelBase
         TargetCropParameter = parameter;
         IsCropMode = true;
         CurrentCropData = null;
-        OnPropertyChanged(nameof(IsCropMode));
     }
 
     [RelayCommand]
@@ -250,29 +226,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            // Store the cropped image as a Mat
-            // For now, we'll store it directly if the property type is Mat
-            // Otherwise, we might need to serialize it
-            if (TargetCropParameter.PropertyType == typeof(Mat))
-            {
-                TargetCropParameter.Value = CurrentCropData.CroppedImage.Clone();
-            }
-            else if (TargetCropParameter.PropertyType == typeof(byte[]))
-            {
-                // Convert Mat to byte array (PNG format)
-                var encoded = CurrentCropData.CroppedImage.ImEncode(".png");
-                TargetCropParameter.Value = encoded;
-            }
-            else if (TargetCropParameter.PropertyType == typeof(string))
-            {
-                // Save to temp file and store path
-                var tempPath = Path.Combine(Path.GetTempPath(), $"crop_{Guid.NewGuid()}.png");
-                Cv2.ImWrite(tempPath, CurrentCropData.CroppedImage);
-                TargetCropParameter.Value = tempPath;
-            }
-
+            _cropService.ApplyCropToParameter(TargetCropParameter, CurrentCropData);
             CancelCrop();
-            OnPropertyChanged(nameof(IsCropMode));
             RenderChain();
         }
         catch (Exception ex)
@@ -288,7 +243,6 @@ public partial class MainWindowViewModel : ViewModelBase
         TargetCropParameter = null;
         CurrentCropData?.Dispose();
         CurrentCropData = null;
-        OnPropertyChanged(nameof(IsCropMode));
     }
 
     public void SetCropSelection(int x, int y, int width, int height)
@@ -324,31 +278,16 @@ public partial class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            // Ensure coordinates are within image bounds
-            var imgWidth = sourceMat.Width;
-            var imgHeight = sourceMat.Height;
-            
-            x = Math.Max(0, Math.Min(x, imgWidth - 1));
-            y = Math.Max(0, Math.Min(y, imgHeight - 1));
-            width = Math.Max(1, Math.Min(width, imgWidth - x));
-            height = Math.Max(1, Math.Min(height, imgHeight - y));
-
-            // Extract the cropped region
-            var rect = new Rect(x, y, width, height);
-            var cropped = new Mat(sourceMat, rect);
-            
             // Dispose old crop data if exists
             CurrentCropData?.Dispose();
             
-            CurrentCropData = new ImageCropData(cropped.Clone(), x, y, width, height);
+            CurrentCropData = _cropService.CreateCropData(sourceMat, x, y, width, height);
             
             // Clean up temporary source mat
             if (sourceMat != _sourceImage)
             {
                 sourceMat.Dispose();
             }
-            
-            OnPropertyChanged(nameof(CurrentCropData));
         }
         catch (Exception ex)
         {
@@ -363,10 +302,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsStreamingPaused = !IsStreamingPaused;
         }
-        OnPropertyChanged(nameof(IsStreamingPlaying));
-        OnPropertyChanged(nameof(PauseButtonIcon));
-        OnPropertyChanged(nameof(PauseButtonTooltip));
-        OnPropertyChanged(nameof(IsStreamingActive));
+        NotifyStreamingStateChanged();
     }
     
     public bool CanStepFrames => IsStreamingActive && IsStreamingPaused;
@@ -412,6 +348,14 @@ public partial class MainWindowViewModel : ViewModelBase
         return _streamingTask != null && !_streamingTask.IsCompleted;
     }
 
+    private void NotifyStreamingStateChanged()
+    {
+        OnPropertyChanged(nameof(IsStreamingActive));
+        OnPropertyChanged(nameof(CanStepFrames));
+        StepFrameForwardCommand.NotifyCanExecuteChanged();
+        StepFrameBackwardCommand.NotifyCanExecuteChanged();
+    }
+
     partial void OnSelectedLayerChanged(LayerViewModel? value)
     {
         UpdateFileParameterVisibility();
@@ -436,10 +380,6 @@ public partial class MainWindowViewModel : ViewModelBase
         if (fileParam == null)
             return;
 
-        var topLevel = GetTopLevel();
-        if (topLevel == null)
-            return;
-
         var fileAttr = fileParam.GetFileAttribute();
         var fileTypeFilter = new List<FilePickerFileType>();
         
@@ -462,14 +402,14 @@ public partial class MainWindowViewModel : ViewModelBase
             fileTypeFilter.Add(FilePickerFileTypes.ImageAll);
         }
 
-        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await _fileDialogService.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Select Image",
             AllowMultiple = false,
             FileTypeFilter = fileTypeFilter
         });
 
-        if (files.Count > 0 && files[0].Path.IsFile)
+        if (files != null && files.Count > 0 && files[0].Path.IsFile)
         {
             var filePath = files[0].Path.LocalPath;
             
@@ -498,11 +438,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (DisplayImage == null)
             return;
 
-        var topLevel = GetTopLevel();
-        if (topLevel == null)
-            return;
-
-        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await _fileDialogService.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Export Image",
             DefaultExtension = "png",
@@ -597,8 +533,16 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public MainWindowViewModel()
+    public MainWindowViewModel() : this(new FileDialogService(), new ImageViewportService(), new CropService())
     {
+    }
+
+    public MainWindowViewModel(IFileDialogService fileDialogService, ImageViewportService viewportService, CropService cropService)
+    {
+        _fileDialogService = fileDialogService;
+        _viewportService = viewportService;
+        _cropService = cropService;
+        
         // Initialize layer factory
         LayerFactory.Initialize();
         
@@ -708,40 +652,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 // Replace in Layers collection
                 var newLayerViewModel = new LayerViewModel(newLayer);
                 
-                // Subscribe to parameter changes
-                foreach (var param in newLayerViewModel.Parameters)
-                {
-                    param.PropertyChanged += (s, e) =>
-                    {
-                        if (e.PropertyName == nameof(ParameterProperty.Value))
-                        {
-                            CheckAndUpdateStreaming();
-                            if (!IsStreamingActive)
-                            {
-                                RenderChain();
-                            }
-                        }
-                    };
-                }
-                
-                // Update file parameter visibility when parameters change
-                newLayerViewModel.Parameters.CollectionChanged += (s, e) =>
-                {
-                    UpdateFileParameterVisibility();
-                };
-                
-                // Subscribe to enabled changes
-                newLayerViewModel.PropertyChanged += (s, e) =>
-                {
-                    if (e.PropertyName == nameof(LayerViewModel.IsEnabled))
-                    {
-                        CheckAndUpdateStreaming();
-                        if (!IsStreamingActive)
-                        {
-                            RenderChain();
-                        }
-                    }
-                };
+                SubscribeToLayerViewModel(newLayerViewModel);
                 
                 Layers[index] = newLayerViewModel;
                 SelectedLayer = newLayerViewModel;
@@ -850,11 +761,7 @@ public partial class MainWindowViewModel : ViewModelBase
     
     private async Task<string?> ShowSaveDialogAsync()
     {
-        var topLevel = GetTopLevel();
-        if (topLevel == null)
-            return null;
-
-        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await _fileDialogService.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Save Layer Chain",
             DefaultExtension = "xml",
@@ -879,11 +786,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task LoadChainAsync()
     {
-        var topLevel = GetTopLevel();
-        if (topLevel == null)
-            return;
-
-        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await _fileDialogService.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Load Layer Chain",
             AllowMultiple = false,
@@ -896,7 +799,7 @@ public partial class MainWindowViewModel : ViewModelBase
             }
         });
 
-        if (files.Count > 0 && files[0].Path.IsFile)
+        if (files != null && files.Count > 0 && files[0].Path.IsFile)
         {
             var filePath = files[0].Path.LocalPath;
             await LoadChainFromFileAsync(filePath);
@@ -962,6 +865,25 @@ public partial class MainWindowViewModel : ViewModelBase
         _layerChain.AddLayer(layer);
         var layerViewModel = new LayerViewModel(layer);
         
+        SubscribeToLayerViewModel(layerViewModel);
+        
+        Layers.Add(layerViewModel);
+        
+        if (SelectedLayer == null)
+        {
+            SelectedLayer = layerViewModel;
+        }
+        
+        CheckAndUpdateStreaming();
+        
+        if (renderAfter && !IsStreamingActive)
+        {
+            RenderChain();
+        }
+    }
+
+    private void SubscribeToLayerViewModel(LayerViewModel layerViewModel)
+    {
         // Subscribe to parameter changes
         foreach (var param in layerViewModel.Parameters)
         {
@@ -996,20 +918,6 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
             }
         };
-        
-        Layers.Add(layerViewModel);
-        
-        if (SelectedLayer == null)
-        {
-            SelectedLayer = layerViewModel;
-        }
-        
-        CheckAndUpdateStreaming();
-        
-        if (renderAfter && !IsStreamingActive)
-        {
-            RenderChain();
-        }
     }
 
     private void RenderChain()
@@ -1094,7 +1002,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     layer.RefreshRuntime();
                 }
                 
-                // Update total runtime
+                // Notify TotalRuntime after refreshing layer runtimes
                 OnPropertyChanged(nameof(TotalRuntime));
 
                 // Update error log
@@ -1134,23 +1042,18 @@ public partial class MainWindowViewModel : ViewModelBase
         if (hasStreamingLayer && !IsStreamingActiveInternal())
         {
             StartStreaming(webcamLayer, videoLayer);
-            OnPropertyChanged(nameof(IsStreamingActive));
-            OnPropertyChanged(nameof(CanStepFrames));
-            StepFrameForwardCommand.NotifyCanExecuteChanged();
-            StepFrameBackwardCommand.NotifyCanExecuteChanged();
+            NotifyStreamingStateChanged();
         }
         else if (!hasStreamingLayer && IsStreamingActiveInternal())
         {
             StopStreaming();
-            OnPropertyChanged(nameof(IsStreamingActive));
+            NotifyStreamingStateChanged();
         }
         else if (hasStreamingLayer && IsStreamingActiveInternal())
         {
             // Update streaming parameters if needed (FPS change, etc.)
             // The streaming loop will pick up the new FPS on next iteration
-            OnPropertyChanged(nameof(CanStepFrames));
-            StepFrameForwardCommand.NotifyCanExecuteChanged();
-            StepFrameBackwardCommand.NotifyCanExecuteChanged();
+            NotifyStreamingStateChanged();
         }
     }
 
@@ -1243,7 +1146,7 @@ public partial class MainWindowViewModel : ViewModelBase
         // Notify UI that streaming has started
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            OnPropertyChanged(nameof(IsStreamingActive));
+            NotifyStreamingStateChanged();
         });
     }
 
@@ -1274,22 +1177,7 @@ public partial class MainWindowViewModel : ViewModelBase
             IsStreamingPaused = false;
         }
         
-        OnPropertyChanged(nameof(IsStreamingActive));
-        OnPropertyChanged(nameof(IsStreamingPaused));
-        OnPropertyChanged(nameof(IsStreamingPlaying));
-        OnPropertyChanged(nameof(PauseButtonIcon));
-        OnPropertyChanged(nameof(PauseButtonTooltip));
-        OnPropertyChanged(nameof(CanStepFrames));
-        StepFrameForwardCommand.NotifyCanExecuteChanged();
-        StepFrameBackwardCommand.NotifyCanExecuteChanged();
-    }
-
-    private static TopLevel? GetTopLevel()
-    {
-        // Try to get the current top level from the application
-        return Avalonia.Application.Current?.ApplicationLifetime is Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
-            ? desktop.MainWindow
-            : null;
+        NotifyStreamingStateChanged();
     }
 }
 
