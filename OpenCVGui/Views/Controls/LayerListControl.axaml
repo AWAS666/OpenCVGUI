@@ -19,7 +19,11 @@
                  x:Name="LayerListBox"
                  DragDrop.AllowDrop="True"
                  DragDrop.DragOver="LayerListBox_DragOver"
-                 DragDrop.Drop="LayerListBox_Drop">
+                 DragDrop.Drop="LayerListBox_Drop"
+                 Focusable="True">
+            <ListBox.KeyBindings>
+                <KeyBinding Gesture="Delete" Command="{Binding RemoveLayerCommand}"/>
+            </ListBox.KeyBindings>
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Border Padding="5"

@@ -17,6 +17,7 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             
             <!-- Layer Type Dropdown -->
@@ -26,21 +27,27 @@
                       Margin="0,0,5,0"
                       VerticalAlignment="Center"
                       ToolTip.Tip="Select layer type to add"
-                      PlaceholderText="Add Layer..."/>
+                      PlaceholderText="Select Layer Type..."/>
             
             <Button Grid.Column="1"
+                    Command="{Binding AddSelectedLayerCommand}"
+                    ToolTip.Tip="Add Selected Layer"
+                    Margin="2">
+				<lucideAvalonia:Lucide Icon="Plus" StrokeBrush="White" StrokeThickness="1.5" Width="22" Height="22"/>
+            </Button>
+            <Button Grid.Column="2"
                     Command="{Binding RemoveLayerCommand}"
-                    ToolTip.Tip="Remove Selected Layer"
+                    ToolTip.Tip="Remove Selected Layer (Delete)"
                     Margin="2">
 				<lucideAvalonia:Lucide Icon="Minus" StrokeBrush="White" StrokeThickness="1.5" Width="22" Height="22"/>
             </Button>
-            <Button Grid.Column="2"
+            <Button Grid.Column="3"
                     Command="{Binding MoveLayerUpCommand}"
                     ToolTip.Tip="Move Layer Up"
                     Margin="2">
 				<lucideAvalonia:Lucide Icon="ArrowBigUp" StrokeBrush="White" StrokeThickness="1.5" Width="22" Height="22"/>
             </Button>
-            <Button Grid.Column="3"
+            <Button Grid.Column="4"
                     Command="{Binding MoveLayerDownCommand}"
                     ToolTip.Tip="Move Layer Down"
                     Margin="2">

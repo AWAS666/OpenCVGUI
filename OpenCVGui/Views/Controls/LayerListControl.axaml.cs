@@ -20,6 +20,27 @@ public partial class LayerListControl : UserControl
     public LayerListControl()
     {
         InitializeComponent();
+        DataContextChanged += LayerListControl_DataContextChanged;
+    }
+
+    private void LayerListControl_DataContextChanged(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel viewModel)
+        {
+            viewModel.PropertyChanged += (s, args) =>
+            {
+                if (args.PropertyName == nameof(MainWindowViewModel.SelectedLayer))
+                {
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                    {
+                        if (LayerListBox != null && LayerListBox.IsVisible)
+                        {
+                            LayerListBox.Focus();
+                        }
+                    }, Avalonia.Threading.DispatcherPriority.Input);
+                }
+            };
+        }
     }
 
     private void LayerItemBorder_PointerPressed(object? sender, PointerPressedEventArgs e)

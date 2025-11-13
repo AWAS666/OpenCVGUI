@@ -411,6 +411,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         UpdateFileParameterVisibility();
         RenderChain();
+        RemoveLayerCommand.NotifyCanExecuteChanged();
     }
 
     private void UpdateFileParameterVisibility()
@@ -575,7 +576,18 @@ public partial class MainWindowViewModel : ViewModelBase
         if (value != null)
         {
             AddLayerOfType(value.LayerTypeId);
-            SelectedLayerType = null; // Reset selection
+        }
+        AddSelectedLayerCommand.NotifyCanExecuteChanged();
+    }
+
+    public bool CanAddSelectedLayer => SelectedLayerType != null;
+
+    [RelayCommand(CanExecute = nameof(CanAddSelectedLayer))]
+    private void AddSelectedLayer()
+    {
+        if (SelectedLayerType != null)
+        {
+            AddLayerOfType(SelectedLayerType.LayerTypeId);
         }
     }
 
@@ -611,7 +623,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    public bool CanRemoveLayer => SelectedLayer != null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveLayer))]
     private void RemoveLayer()
     {
         if (SelectedLayer != null)
@@ -637,9 +651,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     RenderChain();
                 }
+                
+                RemoveLayerCommand.NotifyCanExecuteChanged();
             }
         }
     }
+
 
     [RelayCommand]
     private void MoveLayerUp()
