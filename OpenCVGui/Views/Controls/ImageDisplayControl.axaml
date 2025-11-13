@@ -37,6 +37,18 @@
             <StackPanel Orientation="Horizontal" 
                         HorizontalAlignment="Right"
                         Spacing="5">
+                <!-- Pause/Play Button -->
+                <Button Command="{Binding ToggleStreamingPauseCommand}"
+                        ToolTip.Tip="{Binding PauseButtonTooltip}"
+                        Padding="8"
+                        IsVisible="{Binding IsStreamingActive}">
+                    <lucideAvalonia:Lucide Icon="Pause" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
                 <!-- Export Button -->
                 <Button Command="{Binding ExportImageCommand}"
                         ToolTip.Tip="Export Image"

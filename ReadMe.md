@@ -1,4 +1,5 @@
 ## Todo
+shortcuts
 auto code gen
 restore session
 save startup pos
@@ -12,3 +13,4 @@ translations
 - crop
 - canny
 - morphs
+- stream video

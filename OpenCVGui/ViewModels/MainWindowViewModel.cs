@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private Mat? _sourceImage;
     private CancellationTokenSource? _streamingCancellationTokenSource;
     private Task? _streamingTask;
+    private readonly object _streamingLock = new object();
 
     [ObservableProperty]
     private ObservableCollection<LayerViewModel> _layers = new();
@@ -52,6 +53,17 @@ public partial class MainWindowViewModel : ViewModelBase
     
     public IBrush ChainRenderModeIconColor => IsChainRenderMode ? Brushes.Blue : Brushes.Gray;
 
+    [ObservableProperty]
+    private bool _isStreamingPaused = false;
+
+    public bool IsStreamingPlaying => !IsStreamingPaused;
+    
+    public bool IsStreamingActive => IsStreamingActiveInternal();
+    
+    public string PauseButtonIcon => IsStreamingPaused ? "Play" : "Pause";
+    
+    public string PauseButtonTooltip => IsStreamingPaused ? "Resume Streaming" : "Pause Streaming";
+
     partial void OnRenderModeChanged(RenderMode value)
     {
         OnPropertyChanged(nameof(IsUIRenderMode));
@@ -68,6 +80,24 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             RenderMode = renderMode;
         }
+    }
+
+    [RelayCommand]
+    private void ToggleStreamingPause()
+    {
+        lock (_streamingLock)
+        {
+            IsStreamingPaused = !IsStreamingPaused;
+        }
+        OnPropertyChanged(nameof(IsStreamingPlaying));
+        OnPropertyChanged(nameof(PauseButtonIcon));
+        OnPropertyChanged(nameof(PauseButtonTooltip));
+        OnPropertyChanged(nameof(IsStreamingActive));
+    }
+    
+    private bool IsStreamingActiveInternal()
+    {
+        return _streamingTask != null && !_streamingTask.IsCompleted;
     }
 
     partial void OnSelectedLayerChanged(LayerViewModel? value)
@@ -296,7 +326,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 
                 CheckAndUpdateStreaming();
                 
-                if (!IsStreamingActive())
+                if (!IsStreamingActive)
                 {
                     RenderChain();
                 }
@@ -414,7 +444,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 
                 CheckAndUpdateStreaming();
                 
-                if (!IsStreamingActive())
+                if (!IsStreamingActive)
                 {
                     RenderChain();
                 }
@@ -440,7 +470,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 if (e.PropertyName == nameof(ParameterProperty.Value))
                 {
                     CheckAndUpdateStreaming();
-                    if (!IsStreamingActive())
+                    if (!IsStreamingActive)
                     {
                         RenderChain();
                     }
@@ -460,7 +490,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (e.PropertyName == nameof(LayerViewModel.IsEnabled))
             {
                 CheckAndUpdateStreaming();
-                if (!IsStreamingActive())
+                if (!IsStreamingActive)
                 {
                     RenderChain();
                 }
@@ -476,7 +506,7 @@ public partial class MainWindowViewModel : ViewModelBase
         
         CheckAndUpdateStreaming();
         
-        if (renderAfter && !IsStreamingActive())
+        if (renderAfter && !IsStreamingActive)
         {
             RenderChain();
         }
@@ -486,7 +516,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         // For streaming, allow concurrent renders to prevent blocking
         // The old frame will remain visible until the new one is ready
-        if (IsStreamingActive())
+        if (IsStreamingActive)
         {
             // During streaming, allow multiple renders in parallel
             // Each render will update DisplayImage when ready, keeping old frame visible
@@ -560,33 +590,35 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    private bool IsStreamingActive()
-    {
-        return _streamingTask != null && !_streamingTask.IsCompleted;
-    }
 
     private void CheckAndUpdateStreaming()
     {
-        // Check if there's a WebcamLayer with streaming enabled
+        // Check if there's a streaming layer (WebcamLayer or VideoLayer) with streaming enabled
         var webcamLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.WebcamLayer>()
             .FirstOrDefault(l => l.IsEnabled && l.Streaming);
+        var videoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
+            .FirstOrDefault(l => l.IsEnabled && l.Streaming);
 
-        if (webcamLayer != null && !IsStreamingActive())
+        var hasStreamingLayer = webcamLayer != null || videoLayer != null;
+
+        if (hasStreamingLayer && !IsStreamingActiveInternal())
         {
-            StartStreaming(webcamLayer);
+            StartStreaming(webcamLayer, videoLayer);
+            OnPropertyChanged(nameof(IsStreamingActive));
         }
-        else if (webcamLayer == null && IsStreamingActive())
+        else if (!hasStreamingLayer && IsStreamingActiveInternal())
         {
             StopStreaming();
+            OnPropertyChanged(nameof(IsStreamingActive));
         }
-        else if (webcamLayer != null && IsStreamingActive())
+        else if (hasStreamingLayer && IsStreamingActiveInternal())
         {
             // Update streaming parameters if needed (FPS change, etc.)
             // The streaming loop will pick up the new FPS on next iteration
         }
     }
 
-    private void StartStreaming(OpenCVGui.Lib.Import.WebcamLayer webcamLayer)
+    private void StartStreaming(OpenCVGui.Lib.Import.WebcamLayer? webcamLayer, OpenCVGui.Lib.Import.VideoLayer? videoLayer)
     {
         StopStreaming(); // Make sure any existing stream is stopped
 
@@ -599,18 +631,54 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 try
                 {
-                    // Get current webcam layer and FPS setting (in case it changed)
+                    // Check if paused
+                    bool isPaused;
+                    lock (_streamingLock)
+                    {
+                        isPaused = IsStreamingPaused;
+                    }
+                    
+                    if (isPaused)
+                    {
+                        await Task.Delay(100, cancellationToken);
+                        continue;
+                    }
+
+                    // Get current streaming layers
                     var currentWebcamLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.WebcamLayer>()
                         .FirstOrDefault(l => l.IsEnabled && l.Streaming);
+                    var currentVideoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
+                        .FirstOrDefault(l => l.IsEnabled && l.Streaming);
                     
-                    if (currentWebcamLayer == null)
+                    if (currentWebcamLayer == null && currentVideoLayer == null)
                     {
                         // Streaming was disabled, exit loop
                         break;
                     }
 
-                    int targetFps = currentWebcamLayer.TargetFps;
-                    int delayMs = targetFps > 0 ? 1000 / targetFps : 0;
+                    // Determine FPS from active layer
+                    int targetFps = 0;
+                    double videoFps = 0;
+                    if (currentWebcamLayer != null)
+                    {
+                        targetFps = currentWebcamLayer.TargetFps;
+                    }
+                    else if (currentVideoLayer != null)
+                    {
+                        targetFps = currentVideoLayer.TargetFps;
+                        videoFps = currentVideoLayer.VideoFps;
+                    }
+
+                    int delayMs = 0;
+                    if (targetFps > 0)
+                    {
+                        delayMs = 1000 / targetFps;
+                    }
+                    else if (currentVideoLayer != null && videoFps > 0)
+                    {
+                        // For video with TargetFps = 0, use video's native FPS
+                        delayMs = (int)(1000.0 / videoFps);
+                    }
 
                     RenderChain();
 
@@ -635,6 +703,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
             }
         }, cancellationToken);
+        
+        // Notify UI that streaming has started
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            OnPropertyChanged(nameof(IsStreamingActive));
+        });
     }
 
     private void StopStreaming()
@@ -658,6 +732,15 @@ public partial class MainWindowViewModel : ViewModelBase
             }
             _streamingTask = null;
         }
+        
+        lock (_streamingLock)
+        {
+            IsStreamingPaused = false;
+        }
+        
+        OnPropertyChanged(nameof(IsStreamingActive));
+        OnPropertyChanged(nameof(PauseButtonIcon));
+        OnPropertyChanged(nameof(PauseButtonTooltip));
     }
 
     private static TopLevel? GetTopLevel()
