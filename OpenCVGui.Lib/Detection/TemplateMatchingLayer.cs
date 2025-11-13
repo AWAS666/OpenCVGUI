@@ -1,5 +1,6 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
+using OpenCVGui.Lib.Transform;
 
 namespace OpenCVGui.Lib.Detection;
 
@@ -30,19 +31,11 @@ public class TemplateMatchingLayer : BaseLayer
     [Parameter(DisplayName = "Draw Matches", Description = "Draw bounding boxes around detected matches", Order = 5)]
     public bool DrawMatches { get; set; } = true;
 
-    [Parameter(DisplayName = "Match Color (B)", Description = "Blue component of match bounding box color (0-255)", Order = 6)]
-    [ParameterRange(0, 255, 1)]
-    public int MatchColorB { get; set; } = 0;
+    [Parameter(DisplayName = "Match Color", Description = "Color of match bounding boxes in hex format", Order = 6)]
+    [ParameterColor]
+    public string MatchColorHex { get; set; } = "#00FF00";
 
-    [Parameter(DisplayName = "Match Color (G)", Description = "Green component of match bounding box color (0-255)", Order = 7)]
-    [ParameterRange(0, 255, 1)]
-    public int MatchColorG { get; set; } = 255;
-
-    [Parameter(DisplayName = "Match Color (R)", Description = "Red component of match bounding box color (0-255)", Order = 8)]
-    [ParameterRange(0, 255, 1)]
-    public int MatchColorR { get; set; } = 0;
-
-    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of bounding box lines (-1 = filled)", Order = 9)]
+    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of bounding box lines (-1 = filled)", Order = 7)]
     [ParameterRange(-1, 10, 1)]
     public int LineThickness { get; set; } = 2;
 
@@ -126,7 +119,8 @@ public class TemplateMatchingLayer : BaseLayer
         Mat result = input.Clone();
         if (DrawMatches)
         {
-            var matchColor = new Scalar(MatchColorB, MatchColorG, MatchColorR);
+            var (b, g, r) = ColorUtils.HexToBgr(MatchColorHex);
+            var matchColor = new Scalar(b, g, r);
             foreach (var location in matchLocations)
             {
                 var rect = new Rect(location, _cachedTemplate.Size());

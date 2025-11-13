@@ -1,5 +1,6 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
+using OpenCVGui.Lib.Transform;
 
 namespace OpenCVGui.Lib.Contour;
 
@@ -19,26 +20,18 @@ public class ContourDetectionLayer : BaseLayer
     [Parameter(DisplayName = "Draw on Original", Description = "If true, draws contours on the original image; if false, creates a blank image with contours", Order = 2)]
     public bool DrawOnOriginal { get; set; } = true;
 
-    [Parameter(DisplayName = "Contour Color (B)", Description = "Blue component of contour color (0-255)", Order = 3)]
-    [ParameterRange(0, 255, 1)]
-    public int ContourColorB { get; set; } = 0;
+    [Parameter(DisplayName = "Contour Color", Description = "Color of contours in hex format", Order = 3)]
+    [ParameterColor]
+    public string ContourColorHex { get; set; } = "#00FF00";
 
-    [Parameter(DisplayName = "Contour Color (G)", Description = "Green component of contour color (0-255)", Order = 4)]
-    [ParameterRange(0, 255, 1)]
-    public int ContourColorG { get; set; } = 255;
-
-    [Parameter(DisplayName = "Contour Color (R)", Description = "Red component of contour color (0-255)", Order = 5)]
-    [ParameterRange(0, 255, 1)]
-    public int ContourColorR { get; set; } = 0;
-
-    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of contour lines (-1 = filled)", Order = 6)]
+    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of contour lines (-1 = filled)", Order = 4)]
     [ParameterRange(-1, 10, 1)]
     public int LineThickness { get; set; } = 2;
 
-    [Parameter(DisplayName = "Retrieval Mode", Description = "Contour retrieval mode", Order = 7)]
+    [Parameter(DisplayName = "Retrieval Mode", Description = "Contour retrieval mode", Order = 5)]
     public RetrievalModes RetrievalMode { get; set; } = RetrievalModes.External;
 
-    [Parameter(DisplayName = "Approximation Mode", Description = "Contour approximation mode", Order = 8)]
+    [Parameter(DisplayName = "Approximation Mode", Description = "Contour approximation mode", Order = 6)]
     public ContourApproximationModes ApproximationMode { get; set; } = ContourApproximationModes.ApproxSimple;
 
     public override string GetLayerType() => "ContourDetection";
@@ -80,7 +73,8 @@ public class ContourDetectionLayer : BaseLayer
         }
 
         // Draw contours
-        var contourColor = new Scalar(ContourColorB, ContourColorG, ContourColorR);
+        var (b, g, r) = ColorUtils.HexToBgr(ContourColorHex);
+        var contourColor = new Scalar(b, g, r);
         foreach (var contour in contours)
         {
             var area = Cv2.ContourArea(contour);

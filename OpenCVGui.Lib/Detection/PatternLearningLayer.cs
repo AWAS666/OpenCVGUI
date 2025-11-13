@@ -1,6 +1,7 @@
 using OpenCvSharp;
 using OpenCvSharp.ML;
 using OpenCVGui.Lib.Attributes;
+using OpenCVGui.Lib.Transform;
 
 namespace OpenCVGui.Lib.Detection;
 
@@ -51,19 +52,11 @@ public class PatternLearningLayer : BaseLayer
     [Parameter(DisplayName = "Draw Detections", Description = "Draw bounding boxes around detected patterns", Order = 11)]
     public bool DrawDetections { get; set; } = true;
 
-    [Parameter(DisplayName = "Detection Color (B)", Description = "Blue component of detection bounding box color (0-255)", Order = 12)]
-    [ParameterRange(0, 255, 1)]
-    public int DetectionColorB { get; set; } = 0;
+    [Parameter(DisplayName = "Detection Color", Description = "Color of detection bounding boxes in hex format", Order = 12)]
+    [ParameterColor]
+    public string DetectionColorHex { get; set; } = "#00FF00";
 
-    [Parameter(DisplayName = "Detection Color (G)", Description = "Green component of detection bounding box color (0-255)", Order = 13)]
-    [ParameterRange(0, 255, 1)]
-    public int DetectionColorG { get; set; } = 255;
-
-    [Parameter(DisplayName = "Detection Color (R)", Description = "Red component of detection bounding box color (0-255)", Order = 14)]
-    [ParameterRange(0, 255, 1)]
-    public int DetectionColorR { get; set; } = 0;
-
-    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of bounding box lines (-1 = filled)", Order = 15)]
+    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of bounding box lines (-1 = filled)", Order = 13)]
     [ParameterRange(-1, 10, 1)]
     public int LineThickness { get; set; } = 2;
 
@@ -186,7 +179,8 @@ public class PatternLearningLayer : BaseLayer
         Mat result = input.Clone();
         if (DrawDetections)
         {
-            var detectionColor = new Scalar(DetectionColorB, DetectionColorG, DetectionColorR);
+            var (b, g, r) = ColorUtils.HexToBgr(DetectionColorHex);
+            var detectionColor = new Scalar(b, g, r);
             for (int i = 0; i < detections.Count; i++)
             {
                 Cv2.Rectangle(result, detections[i], detectionColor, LineThickness);
