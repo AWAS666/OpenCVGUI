@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCVGui", "OpenCVGui\Open
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCVGui.Lib", "OpenCVGui.Lib\OpenCVGui.Lib.csproj", "{1482BDD1-F37F-427E-B080-18F5B4D5AEC6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCVGui.LibTests", "OpenCVGui.LibTests\OpenCVGui.LibTests.csproj", "{0950EF08-59C2-49D1-AFF3-3F9178EA5B91}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{1482BDD1-F37F-427E-B080-18F5B4D5AEC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1482BDD1-F37F-427E-B080-18F5B4D5AEC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1482BDD1-F37F-427E-B080-18F5B4D5AEC6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0950EF08-59C2-49D1-AFF3-3F9178EA5B91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0950EF08-59C2-49D1-AFF3-3F9178EA5B91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0950EF08-59C2-49D1-AFF3-3F9178EA5B91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0950EF08-59C2-49D1-AFF3-3F9178EA5B91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
