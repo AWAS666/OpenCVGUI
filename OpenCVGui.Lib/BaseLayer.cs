@@ -33,11 +33,13 @@ public abstract class BaseLayer
     /// <summary>
     /// Can expect input and returns output
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="input">UI input (for visualization)</param>
+    /// <param name="renderMode">Rendering mode (UI or Chain)</param>
+    /// <param name="chainInput">Optional chain input (for processing when in UI mode)</param>
     /// <returns></returns>
-    protected abstract Mat RenderInternal(Mat? input);
+    protected abstract Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null);
 
-    public Mat Render(Mat? input)
+    public Mat Render(Mat? input, RenderMode renderMode = RenderMode.Chain, Mat? chainInput = null)
     {
         if (!IsEnabled)
         {
@@ -45,7 +47,7 @@ public abstract class BaseLayer
         }
 
         var watch = Stopwatch.StartNew();
-        var result = RenderInternal(input);
+        var result = RenderInternal(input, renderMode, chainInput);
         LastRuntime = watch.ElapsedMilliseconds;
         return result;
     }

@@ -17,7 +17,7 @@ public class ImageZoomLayer : BaseLayer
 
     public override string GetLayerType() => "ImageZoom";
 
-    protected override Mat RenderInternal(Mat? input)
+    protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
     {
         if (input == null || input.Empty())
         {

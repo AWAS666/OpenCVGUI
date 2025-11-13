@@ -4,6 +4,7 @@
         xmlns:controls="using:OpenCVGui.Views.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:lucideAvalonia="clr-namespace:LucideAvalonia;assembly=LucideAvalonia"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="OpenCVGui.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -26,6 +27,34 @@
             <MenuItem Header="File">
                 <MenuItem Header="Save Chain" Command="{Binding SaveChainCommand}"/>
                 <MenuItem Header="Load Chain" Command="{Binding LoadChainCommand}"/>
+            </MenuItem>
+            <MenuItem Command="{Binding SetRenderModeCommand}"
+                        CommandParameter="UI"
+                        IsEnabled="{Binding IsChainRenderMode}">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <lucideAvalonia:Lucide Icon="Eye" 
+                                               StrokeBrush="{Binding UIRenderModeIconColor}" 
+                                               StrokeThickness="2" 
+                                               Width="16" 
+                                               Height="16"/>
+                        <TextBlock Text="UI Render Mode"/>
+                    </StackPanel>
+                </MenuItem.Header>
+            </MenuItem>
+            <MenuItem Command="{Binding SetRenderModeCommand}"
+                        CommandParameter="Chain"
+                        IsEnabled="{Binding IsUIRenderMode}">
+                <MenuItem.Header>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <lucideAvalonia:Lucide Icon="Link" 
+                                               StrokeBrush="{Binding ChainRenderModeIconColor}" 
+                                               StrokeThickness="2" 
+                                               Width="16" 
+                                               Height="16"/>
+                        <TextBlock Text="Chain Render Mode"/>
+                    </StackPanel>
+                </MenuItem.Header>
             </MenuItem>
         </Menu>
 

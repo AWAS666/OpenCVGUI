@@ -30,7 +30,7 @@ public class ColorMatchLayer : BaseLayer
 
     public override string GetLayerType() => "ColorMatch";
 
-    protected override Mat RenderInternal(Mat? input)
+    protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
     {
         if (input == null || input.Empty())
         {
@@ -79,7 +79,24 @@ public class ColorMatchLayer : BaseLayer
         Cv2.InRange(hsv, lower, upper, mask);
 
         Mat result;
-        switch (OutputMode)
+        
+        // Determine effective output mode based on render mode
+        ColorMatchOutputMode effectiveMode = OutputMode;
+        if (renderMode == RenderMode.UI)
+        {
+            // For UI, prefer overlay modes for better visualization
+            if (OutputMode == ColorMatchOutputMode.Mask)
+            {
+                effectiveMode = ColorMatchOutputMode.OriginalWithMask;
+            }
+        }
+        else
+        {
+            // For chain, always use mask (actual output for next layer)
+            effectiveMode = ColorMatchOutputMode.Mask;
+        }
+
+        switch (effectiveMode)
         {
             case ColorMatchOutputMode.Mask:
                 result = mask.Clone();

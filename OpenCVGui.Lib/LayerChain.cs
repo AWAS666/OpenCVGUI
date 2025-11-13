@@ -82,8 +82,9 @@ public class LayerChain
     /// Renders the entire chain, processing the input through all enabled layers
     /// </summary>
     /// <param name="inputImage">Input image (can be null for layers that generate their own input)</param>
+    /// <param name="renderMode">Rendering mode (UI or Chain)</param>
     /// <returns>Final processed image</returns>
-    public Mat RenderChain(Mat? inputImage = null)
+    public Mat RenderChain(Mat? inputImage = null, RenderMode renderMode = RenderMode.Chain)
     {
         Mat? current = inputImage;
 
@@ -91,7 +92,7 @@ public class LayerChain
         {
             if (layer.IsEnabled)
             {
-                current = layer.Render(current);
+                current = layer.Render(current, renderMode);
             }
         }
 
@@ -103,24 +104,69 @@ public class LayerChain
     /// </summary>
     /// <param name="layerIndex">Index of the last layer to render (inclusive)</param>
     /// <param name="inputImage">Input image (can be null)</param>
+    /// <param name="renderMode">Rendering mode (UI or Chain)</param>
     /// <returns>Image after processing through layers up to the specified index</returns>
-    public Mat RenderUpTo(int layerIndex, Mat? inputImage = null)
+    public Mat RenderUpTo(int layerIndex, Mat? inputImage = null, RenderMode renderMode = RenderMode.Chain)
     {
         if (layerIndex < 0 || layerIndex >= _layers.Count)
             throw new ArgumentOutOfRangeException(nameof(layerIndex));
 
-        Mat? current = inputImage;
-
-        for (int i = 0; i <= layerIndex; i++)
+        if (renderMode == RenderMode.UI)
         {
-            var layer = _layers[i];
-            if (layer.IsEnabled)
-            {
-                current = layer.Render(current);
-            }
-        }
+            // In UI mode: render previous layers in Chain mode to get processing output,
+            // then render current layer in UI mode with both chain output (for processing)
+            // and UI output from previous layers (for visualization)
+            Mat? chainOutput = inputImage;
+            Mat? uiOutput = inputImage;
 
-        return current ?? new Mat();
+            // Render all previous layers in Chain mode to get processing output
+            for (int i = 0; i < layerIndex; i++)
+            {
+                var layer = _layers[i];
+                if (layer.IsEnabled)
+                {
+                    chainOutput = layer.Render(chainOutput, RenderMode.Chain);
+                }
+            }
+
+            // Render previous layers in UI mode to get visualization output
+            for (int i = 0; i < layerIndex; i++)
+            {
+                var layer = _layers[i];
+                if (layer.IsEnabled)
+                {
+                    uiOutput = layer.Render(uiOutput, RenderMode.UI);
+                }
+            }
+
+            // Render current layer in UI mode, passing both UI output (for drawing)
+            // and chain output (for processing)
+            var currentLayer = _layers[layerIndex];
+            if (currentLayer.IsEnabled)
+            {
+                // Pass uiOutput as the main input (for visualization/drawing)
+                // and chainOutput as chainInput (for processing)
+                return currentLayer.Render(uiOutput, RenderMode.UI, chainOutput);
+            }
+
+            return uiOutput ?? new Mat();
+        }
+        else
+        {
+            // In Chain mode: all layers render in Chain mode
+            Mat? current = inputImage;
+
+            for (int i = 0; i <= layerIndex; i++)
+            {
+                var layer = _layers[i];
+                if (layer.IsEnabled)
+                {
+                    current = layer.Render(current, RenderMode.Chain);
+                }
+            }
+
+            return current ?? new Mat();
+        }
     }
 
     /// <summary>

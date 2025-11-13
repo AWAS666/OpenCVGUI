@@ -35,22 +35,39 @@ public class MorphologicalContourLayer : BaseLayer
 
     public override string GetLayerType() => "MorphologicalContour";
 
-    protected override Mat RenderInternal(Mat? input)
+    protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
     {
         if (input == null || input.Empty())
         {
             return new Mat();
         }
 
-        // Convert to grayscale if needed for mask operations
+        // In UI mode, use chainInput for processing (mask) if available,
+        // otherwise fall back to converting input to grayscale
         Mat mask = new Mat();
-        if (input.Channels() == 3)
+        if (renderMode == RenderMode.UI && chainInput != null && !chainInput.Empty())
         {
-            Cv2.CvtColor(input, mask, ColorConversionCodes.BGR2GRAY);
+            // Use chain output (mask) for processing
+            if (chainInput.Channels() == 1)
+            {
+                mask = chainInput.Clone();
+            }
+            else
+            {
+                Cv2.CvtColor(chainInput, mask, ColorConversionCodes.BGR2GRAY);
+            }
         }
         else
         {
-            mask = input.Clone();
+            // Convert input to grayscale for mask operations
+            if (input.Channels() == 3)
+            {
+                Cv2.CvtColor(input, mask, ColorConversionCodes.BGR2GRAY);
+            }
+            else
+            {
+                mask = input.Clone();
+            }
         }
 
         // Create kernel for morphological operations

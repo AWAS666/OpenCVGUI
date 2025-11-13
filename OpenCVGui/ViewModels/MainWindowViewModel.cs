@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Media.Imaging;
+using Avalonia.Media;
 
 namespace OpenCVGui.ViewModels;
 
@@ -39,6 +40,35 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasFileParameter;
+
+    [ObservableProperty]
+    private RenderMode _renderMode = RenderMode.UI;
+
+    public bool IsUIRenderMode => RenderMode == RenderMode.UI;
+    
+    public bool IsChainRenderMode => RenderMode == RenderMode.Chain;
+
+    public IBrush UIRenderModeIconColor => IsUIRenderMode ? Brushes.Green : Brushes.Gray;
+    
+    public IBrush ChainRenderModeIconColor => IsChainRenderMode ? Brushes.Blue : Brushes.Gray;
+
+    partial void OnRenderModeChanged(RenderMode value)
+    {
+        OnPropertyChanged(nameof(IsUIRenderMode));
+        OnPropertyChanged(nameof(IsChainRenderMode));
+        OnPropertyChanged(nameof(UIRenderModeIconColor));
+        OnPropertyChanged(nameof(ChainRenderModeIconColor));
+        RenderChain();
+    }
+
+    [RelayCommand]
+    private void SetRenderMode(string mode)
+    {
+        if (Enum.TryParse<RenderMode>(mode, out var renderMode))
+        {
+            RenderMode = renderMode;
+        }
+    }
 
     partial void OnSelectedLayerChanged(LayerViewModel? value)
     {
@@ -161,7 +191,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     var selectedIndex = Layers.IndexOf(SelectedLayer);
                     if (selectedIndex >= 0)
                     {
-                        result = _layerChain.RenderUpTo(selectedIndex, _sourceImage);
+                        result = _layerChain.RenderUpTo(selectedIndex, _sourceImage, RenderMode.Chain);
                     }
                 }
                 else if (_sourceImage != null)
@@ -170,7 +200,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
                 else if (_layerChain.Count > 0)
                 {
-                    result = _layerChain.RenderChain(_sourceImage);
+                    result = _layerChain.RenderChain(_sourceImage, RenderMode.Chain);
                 }
 
                 if (result != null && !result.Empty())
@@ -489,23 +519,23 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Mat? result = null;
 
-            if (SelectedLayer != null)
-            {
-                var selectedIndex = Layers.IndexOf(SelectedLayer);
-                if (selectedIndex >= 0)
+                if (SelectedLayer != null)
                 {
-                    result = _layerChain.RenderUpTo(selectedIndex, _sourceImage);
+                    var selectedIndex = Layers.IndexOf(SelectedLayer);
+                    if (selectedIndex >= 0)
+                    {
+                        result = _layerChain.RenderUpTo(selectedIndex, _sourceImage, RenderMode);
+                    }
                 }
-            }
-            else if (_sourceImage != null)
-            {
-                result = _sourceImage.Clone();
-            }
-            else if (_layerChain.Count > 0)
-            {
-                // Render full chain if no selection
-                result = _layerChain.RenderChain(_sourceImage);
-            }
+                else if (_sourceImage != null)
+                {
+                    result = _sourceImage.Clone();
+                }
+                else if (_layerChain.Count > 0)
+                {
+                    // Render full chain if no selection
+                    result = _layerChain.RenderChain(_sourceImage, RenderMode);
+                }
 
             var bitmap = ImageConverter.MatToBitmapSafe(result);
             

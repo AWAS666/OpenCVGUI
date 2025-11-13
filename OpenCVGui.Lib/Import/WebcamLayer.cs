@@ -32,7 +32,7 @@ public class WebcamLayer : BaseLayer
 
     public override string GetLayerType() => "Webcam";
 
-    protected override Mat RenderInternal(Mat? input)
+    protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
     {
         // Initialize or reinitialize video capture if device index changed
         if (_videoCapture == null || _lastDeviceIndex != DeviceIndex)

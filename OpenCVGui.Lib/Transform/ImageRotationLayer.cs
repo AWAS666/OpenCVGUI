@@ -23,7 +23,7 @@ public class ImageRotationLayer : BaseLayer
 
     public override string GetLayerType() => "ImageRotation";
 
-    protected override Mat RenderInternal(Mat? input)
+    protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
     {
         if (input == null || input.Empty())
         {

@@ -14,7 +14,7 @@ public class ImageImportLayer : BaseLayer
 
     public override string GetLayerType() => "ImageImport";
 
-    protected override Mat RenderInternal(Mat? input)
+    protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
     {
         if (string.IsNullOrEmpty(ImagePath) || !File.Exists(ImagePath))
         {
