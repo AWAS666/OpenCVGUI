@@ -50,14 +50,14 @@ public partial class LayerViewModel : ViewModelBase
         }
     }
 
-    public long LastRuntime => _layer.LastRuntime;
+    public double LastRuntime => Math.Round(_layer.LastRuntime, 2);
 
     public ObservableCollection<ParameterProperty> Parameters { get; } = new();
 
     public LayerViewModel(BaseLayer layer)
     {
         _layer = layer ?? throw new ArgumentNullException(nameof(layer));
-        
+
         // Initialize default name if empty
         if (string.IsNullOrEmpty(_layer.Name))
         {
@@ -71,7 +71,7 @@ public partial class LayerViewModel : ViewModelBase
     private void DiscoverParameters()
     {
         var properties = _layer.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        
+
         var parameterProperties = properties
             .Where(p => p.GetCustomAttribute<ParameterAttribute>() != null)
             .Select(p => new ParameterProperty(p, _layer))
@@ -82,7 +82,7 @@ public partial class LayerViewModel : ViewModelBase
         foreach (var param in parameterProperties)
         {
             Parameters.Add(param);
-            
+
             // Subscribe to value changes to trigger re-render
             param.PropertyChanged += (s, e) =>
             {

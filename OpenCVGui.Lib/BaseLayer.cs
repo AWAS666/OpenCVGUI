@@ -23,7 +23,7 @@ public abstract class BaseLayer
     /// <summary>
     /// Runtime of last render call in milliseconds
     /// </summary>
-    public long LastRuntime { get; protected set; }
+    public double LastRuntime { get; protected set; }
 
     /// <summary>
     /// Returns the unique type identifier for this layer class
@@ -48,7 +48,7 @@ public abstract class BaseLayer
 
         var watch = Stopwatch.StartNew();
         var result = RenderInternal(input, renderMode, chainInput);
-        LastRuntime = watch.ElapsedMilliseconds;
+        LastRuntime = watch.Elapsed.TotalMilliseconds;
         return result;
     }
 }

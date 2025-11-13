@@ -52,6 +52,17 @@ public partial class MainWindowViewModel : ViewModelBase
     public IBrush UIRenderModeIconColor => IsUIRenderMode ? Brushes.Green : Brushes.Gray;
     
     public IBrush ChainRenderModeIconColor => IsChainRenderMode ? Brushes.Blue : Brushes.Gray;
+    
+    /// <summary>
+    /// Total runtime of all layers in milliseconds
+    /// </summary>
+    public double TotalRuntime
+    {
+        get
+        {
+            return Layers.Sum(layer => layer.LastRuntime);
+        }
+    }
 
     [ObservableProperty]
     private bool _isStreamingPaused = false;
@@ -631,6 +642,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     layer.RefreshRuntime();
                 }
+                
+                // Update total runtime
+                OnPropertyChanged(nameof(TotalRuntime));
             });
 
             result?.Dispose();
