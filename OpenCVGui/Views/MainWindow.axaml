@@ -25,8 +25,14 @@
         <!-- Menu Bar -->
         <Menu Grid.Row="0">
             <MenuItem Header="File">
-                <MenuItem Header="Save Chain" Command="{Binding SaveChainCommand}"/>
-                <MenuItem Header="Load Chain" Command="{Binding LoadChainCommand}"/>
+                <MenuItem Header="Save Chain" InputGesture="Ctrl+S"
+                          Command="{Binding SaveChainCommand}"
+                          HotKey="Ctrl+S"/>
+                <MenuItem Header="Save Chain As..." 
+                          Command="{Binding SaveAsChainCommand}"/>
+                <MenuItem Header="Load Chain" InputGesture="Ctrl+O"
+                          Command="{Binding LoadChainCommand}"
+                          HotKey="Ctrl+O"/>
             </MenuItem>
             <MenuItem Command="{Binding SetRenderModeCommand}"
                         CommandParameter="UI"

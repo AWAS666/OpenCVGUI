@@ -520,9 +520,67 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveChainAsync()
     {
+        try
+        {
+            string? filePath = null;
+            
+            // Check if there's a last loaded file path
+            var lastFile = SessionManager.GetLastLoadedFile();
+            if (lastFile != null && File.Exists(lastFile))
+            {
+                // Save to the last loaded file path
+                filePath = lastFile;
+            }
+            else
+            {
+                // Show save dialog
+                filePath = await ShowSaveDialogAsync();
+            }
+            
+            if (filePath != null)
+            {
+                var xml = LayerChainSerializer.Serialize(_layerChain);
+                await File.WriteAllTextAsync(filePath, xml);
+                
+                // Update the session with the saved file path
+                SessionManager.SaveLastLoadedFile(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            // TODO: Show error dialog
+            System.Diagnostics.Debug.WriteLine($"Error saving chain: {ex.Message}");
+        }
+    }
+    
+    [RelayCommand]
+    private async Task SaveAsChainAsync()
+    {
+        try
+        {
+            var filePath = await ShowSaveDialogAsync();
+            
+            if (filePath != null)
+            {
+                var xml = LayerChainSerializer.Serialize(_layerChain);
+                await File.WriteAllTextAsync(filePath, xml);
+                
+                // Update the session with the saved file path
+                SessionManager.SaveLastLoadedFile(filePath);
+            }
+        }
+        catch (Exception ex)
+        {
+            // TODO: Show error dialog
+            System.Diagnostics.Debug.WriteLine($"Error saving chain: {ex.Message}");
+        }
+    }
+    
+    private async Task<string?> ShowSaveDialogAsync()
+    {
         var topLevel = GetTopLevel();
         if (topLevel == null)
-            return;
+            return null;
 
         var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
@@ -540,17 +598,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
         if (file != null && file.Path.IsFile)
         {
-            try
-            {
-                var xml = LayerChainSerializer.Serialize(_layerChain);
-                await File.WriteAllTextAsync(file.Path.LocalPath, xml);
-            }
-            catch (Exception ex)
-            {
-                // TODO: Show error dialog
-                System.Diagnostics.Debug.WriteLine($"Error saving chain: {ex.Message}");
-            }
+            return file.Path.LocalPath;
         }
+        
+        return null;
     }
 
     [RelayCommand]
