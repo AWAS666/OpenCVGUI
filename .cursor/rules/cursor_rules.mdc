@@ -1,0 +1,147 @@
+---
+alwaysApply: true
+---
+
+# OpenCV GUI Project - Cursor Rules
+
+## Project Overview
+
+This is an OpenCV-based image processing application built with Avalonia UI. The application uses a layer-based architecture where image processing operations are organized as a chain of layers that process images sequentially.
+
+## Technology Stack
+
+### Core Technologies
+- **.NET 9.0** - Target framework
+- **C#** - Primary programming language
+- **Nullable Reference Types** - Enabled
+- **Implicit Usings** - Enabled in library projects
+
+### UI Framework
+- **Avalonia** - Cross-platform UI framework
+  - Desktop application support
+
+### MVVM Framework
+- **CommunityToolkit.Mvvm** - MVVM pattern implementation
+  - `ObservableObject` - Base class for ViewModels
+  - `[ObservableProperty]` - Source generator for properties
+  - `[RelayCommand]` - Source generator for commands
+
+### Image Processing
+- **OpenCvSharp4** - OpenCV .NET bindings
+  - Extension methods
+  - Windows runtime (library project)
+
+### Additional Libraries
+- **LucideAvalonia** - Icon library for Avalonia
+
+## Project Structure
+
+### Main Application (`OpenCVGui`)
+- **Views/** - Avalonia XAML views and code-behind
+  - Main window and user controls
+  - Parameter editor controls
+- **ViewModels/** - MVVM ViewModels
+  - Base ViewModel class extending `ObservableObject`
+- **Utils/** - Utility classes
+  - Image conversion utilities
+  - Session management
+
+### Library (`OpenCVGui.Lib`)
+- **BaseLayer.cs** - Abstract base class for all image processing layers
+- **LayerChain.cs** - Manages ordered collection of layers
+- **LayerFactory.cs** - Factory for creating layer instances
+- **Attributes/** - Custom attributes for parameter metadata
+  - Parameter attributes for UI binding
+  - Range, enum, file, and color parameter attributes
+- **Layer Categories/** - Various categories of image processing layers
+  - Create new category folders as needed for organizing layers
+- **Serialization/** - Layer chain serialization
+
+### Test Projects
+- `OpenCVGui.LibTests` - Unit tests for library
+- `OpenCVGUITest` - Test application
+
+## Architecture Patterns
+
+### MVVM Pattern
+- **Views** - Avalonia XAML files (`.axaml`) with code-behind (`.axaml.cs`)
+- **ViewModels** - C# classes using CommunityToolkit.Mvvm
+- **ViewLocator** - Automatic View-ViewModel resolution (convention: `ViewModel` → `View`)
+- **Data Binding** - Compiled bindings preferred, using `x:DataType` in XAML
+
+### Layer Architecture
+- All layers inherit from base layer class
+- Layers implement render method
+- Layers can be enabled/disabled
+- Layers track runtime performance
+- Layers use attributes to expose parameters to UI
+
+### Parameter System
+- Properties marked with `[Parameter]` attribute are automatically exposed to UI
+- Parameter editors are generated based on property type and attributes
+- Supports: numeric ranges, enums, file paths, colors
+
+### Rendering Modes
+- **UI Mode** - Visual rendering with overlays/drawings
+- **Chain Mode** - Processing-only rendering
+
+## Coding Conventions
+
+### C# Style
+- Use `file-scoped namespaces` (no braces around namespace)
+- Use `partial` classes for ViewModels when using source generators
+- Use `ObservableProperty` and `RelayCommand` attributes from CommunityToolkit.Mvvm
+- Use nullable reference types - always check for null when appropriate
+- Use `async/await` for asynchronous operations
+- Use `Task.Run()` for CPU-intensive work off UI thread
+- Use `Dispatcher.UIThread.Post()` to update UI from background threads
+
+### Avalonia XAML
+- Use `x:DataType` for compiled bindings
+- Use `xmlns:vm` for ViewModel namespaces
+- Use `xmlns:controls` for custom controls
+- Use `xmlns:lucideAvalonia` for icons
+- Bind commands using `Command="{Binding CommandName}"`
+- Use `HotKey` for keyboard shortcuts
+
+### OpenCV Patterns
+- Always check if `Mat` is null or empty before processing
+- Dispose `Mat` objects when no longer needed
+- Clone `Mat` objects when passing to multiple consumers
+- Use `Cv2` static class for OpenCV operations
+
+### Layer Implementation
+- Override layer type method to return unique identifier
+- Implement render method with input, render mode, and optional chain input
+- Mark parameters with `[Parameter]` attribute
+- Use `[ParameterRange]` for numeric constraints
+- Handle null/empty input gracefully
+- Return new `Mat` instance (don't modify input directly)
+
+### Error Handling
+- Use try-catch blocks for file operations
+- Log errors using `System.Diagnostics.Debug.WriteLine()`
+- Gracefully handle null/empty images
+- Clean up resources in finally blocks or using statements
+
+### Threading
+- UI updates must be on UI thread (`Dispatcher.UIThread.Post()`)
+- Background processing uses `Task.Run()`
+- Use `CancellationToken` for cancellable operations
+- Use locks for thread-safe state access
+
+## File Naming Conventions
+- Views: `*View.axaml` / `*View.axaml.cs`
+- ViewModels: `*ViewModel.cs`
+- Layers: `*Layer.cs`
+- Controls: `*Control.axaml` / `*Control.axaml.cs`
+
+## Important Notes
+
+1. **Compiled Bindings**: Always use `x:DataType` in XAML for compiled bindings
+2. **Resource Management**: OpenCV `Mat` objects must be disposed properly
+3. **Thread Safety**: UI updates must be on UI thread
+4. **Nullable Types**: Project uses nullable reference types - be explicit about nullability
+5. **Session Management**: Application persists last loaded file path
+6. **Streaming**: Video/webcam layers support streaming with pause/step controls
+7. **Render Modes**: UI mode shows visualizations, Chain mode is processing-only
