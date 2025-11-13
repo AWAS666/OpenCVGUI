@@ -71,18 +71,5 @@
                 </Border>
             </Grid>
         </Grid>
-
-        <!-- Rendering Indicator -->
-        <Border Grid.Row="1"
-                Background="#80000000"
-                IsVisible="{Binding IsRendering}"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch">
-            <TextBlock Text="Rendering..."
-                       Foreground="White"
-                       FontSize="18"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Center"/>
-        </Border>
     </Grid>
 </Window>

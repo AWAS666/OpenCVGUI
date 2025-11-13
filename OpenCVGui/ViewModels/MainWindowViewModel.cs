@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
@@ -21,6 +22,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly LayerChain _layerChain = new();
     private readonly RenderCache _renderCache = new();
     private Mat? _sourceImage;
+    private CancellationTokenSource? _streamingCancellationTokenSource;
+    private Task? _streamingTask;
 
     [ObservableProperty]
     private ObservableCollection<LayerViewModel> _layers = new();
@@ -261,7 +264,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     SelectedLayer = null;
                 }
                 
-                RenderChain();
+                CheckAndUpdateStreaming();
+                
+                if (!IsStreamingActive())
+                {
+                    RenderChain();
+                }
             }
         }
     }
@@ -360,6 +368,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 var chain = LayerChainSerializer.Deserialize(xml);
                 
                 // Replace current chain
+                StopStreaming();
                 _layerChain.Clear();
                 Layers.Clear();
                 
@@ -373,7 +382,12 @@ public partial class MainWindowViewModel : ViewModelBase
                     SelectedLayer = Layers[0];
                 }
                 
-                RenderChain();
+                CheckAndUpdateStreaming();
+                
+                if (!IsStreamingActive())
+                {
+                    RenderChain();
+                }
             }
             catch (Exception ex)
             {
@@ -395,7 +409,11 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 if (e.PropertyName == nameof(ParameterProperty.Value))
                 {
-                    RenderChain();
+                    CheckAndUpdateStreaming();
+                    if (!IsStreamingActive())
+                    {
+                        RenderChain();
+                    }
                 }
             };
         }
@@ -411,7 +429,11 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (e.PropertyName == nameof(LayerViewModel.IsEnabled))
             {
-                RenderChain();
+                CheckAndUpdateStreaming();
+                if (!IsStreamingActive())
+                {
+                    RenderChain();
+                }
             }
         };
         
@@ -422,7 +444,9 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectedLayer = layerViewModel;
         }
         
-        if (renderAfter)
+        CheckAndUpdateStreaming();
+        
+        if (renderAfter && !IsStreamingActive())
         {
             RenderChain();
         }
@@ -430,61 +454,180 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RenderChain()
     {
-        if (IsRendering)
-            return;
+        // For streaming, allow concurrent renders to prevent blocking
+        // The old frame will remain visible until the new one is ready
+        if (IsStreamingActive())
+        {
+            // During streaming, allow multiple renders in parallel
+            // Each render will update DisplayImage when ready, keeping old frame visible
+            Task.Run(() =>
+            {
+                RenderChainInternal();
+            });
+        }
+        else
+        {
+            // For non-streaming, only render if not already rendering
+            if (IsRendering)
+                return;
 
-        IsRendering = true;
+            IsRendering = true;
+            Task.Run(() =>
+            {
+                RenderChainInternal();
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    IsRendering = false;
+                });
+            });
+        }
+    }
 
-        Task.Run(() =>
+    private void RenderChainInternal()
+    {
+        try
+        {
+            Mat? result = null;
+
+            if (SelectedLayer != null)
+            {
+                var selectedIndex = Layers.IndexOf(SelectedLayer);
+                if (selectedIndex >= 0)
+                {
+                    result = _layerChain.RenderUpTo(selectedIndex, _sourceImage);
+                }
+            }
+            else if (_sourceImage != null)
+            {
+                result = _sourceImage.Clone();
+            }
+            else if (_layerChain.Count > 0)
+            {
+                // Render full chain if no selection
+                result = _layerChain.RenderChain(_sourceImage);
+            }
+
+            var bitmap = ImageConverter.MatToBitmapSafe(result);
+            
+            // Update UI on main thread
+            // Old frame stays visible until this update happens
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                DisplayImage = bitmap;
+                
+                // Refresh runtime display
+                foreach (var layer in Layers)
+                {
+                    layer.RefreshRuntime();
+                }
+            });
+
+            result?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error rendering: {ex.Message}");
+        }
+    }
+
+    private bool IsStreamingActive()
+    {
+        return _streamingTask != null && !_streamingTask.IsCompleted;
+    }
+
+    private void CheckAndUpdateStreaming()
+    {
+        // Check if there's a WebcamLayer with streaming enabled
+        var webcamLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.WebcamLayer>()
+            .FirstOrDefault(l => l.IsEnabled && l.Streaming);
+
+        if (webcamLayer != null && !IsStreamingActive())
+        {
+            StartStreaming(webcamLayer);
+        }
+        else if (webcamLayer == null && IsStreamingActive())
+        {
+            StopStreaming();
+        }
+        else if (webcamLayer != null && IsStreamingActive())
+        {
+            // Update streaming parameters if needed (FPS change, etc.)
+            // The streaming loop will pick up the new FPS on next iteration
+        }
+    }
+
+    private void StartStreaming(OpenCVGui.Lib.Import.WebcamLayer webcamLayer)
+    {
+        StopStreaming(); // Make sure any existing stream is stopped
+
+        _streamingCancellationTokenSource = new CancellationTokenSource();
+        var cancellationToken = _streamingCancellationTokenSource.Token;
+
+        _streamingTask = Task.Run(async () =>
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    // Get current webcam layer and FPS setting (in case it changed)
+                    var currentWebcamLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.WebcamLayer>()
+                        .FirstOrDefault(l => l.IsEnabled && l.Streaming);
+                    
+                    if (currentWebcamLayer == null)
+                    {
+                        // Streaming was disabled, exit loop
+                        break;
+                    }
+
+                    int targetFps = currentWebcamLayer.TargetFps;
+                    int delayMs = targetFps > 0 ? 1000 / targetFps : 0;
+
+                    RenderChain();
+
+                    if (delayMs > 0)
+                    {
+                        await Task.Delay(delayMs, cancellationToken);
+                    }
+                    else
+                    {
+                        // Maximum speed - small delay to prevent CPU spinning
+                        await Task.Delay(1, cancellationToken);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error in streaming loop: {ex.Message}");
+                    await Task.Delay(100, cancellationToken); // Wait before retrying
+                }
+            }
+        }, cancellationToken);
+    }
+
+    private void StopStreaming()
+    {
+        if (_streamingCancellationTokenSource != null)
+        {
+            _streamingCancellationTokenSource.Cancel();
+            _streamingCancellationTokenSource.Dispose();
+            _streamingCancellationTokenSource = null;
+        }
+
+        if (_streamingTask != null)
         {
             try
             {
-                Mat? result = null;
-
-                if (SelectedLayer != null)
-                {
-                    var selectedIndex = Layers.IndexOf(SelectedLayer);
-                    if (selectedIndex >= 0)
-                    {
-                        result = _layerChain.RenderUpTo(selectedIndex, _sourceImage);
-                    }
-                }
-                else if (_sourceImage != null)
-                {
-                    result = _sourceImage.Clone();
-                }
-                else if (_layerChain.Count > 0)
-                {
-                    // Render full chain if no selection
-                    result = _layerChain.RenderChain(_sourceImage);
-                }
-
-                var bitmap = ImageConverter.MatToBitmapSafe(result);
-                
-                // Update UI on main thread
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    DisplayImage = bitmap;
-                    IsRendering = false;
-                    
-                    // Refresh runtime display
-                    foreach (var layer in Layers)
-                    {
-                        layer.RefreshRuntime();
-                    }
-                });
-
-                result?.Dispose();
+                _streamingTask.Wait(TimeSpan.FromSeconds(1));
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine($"Error rendering: {ex.Message}");
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    IsRendering = false;
-                });
+                // Ignore timeout
             }
-        });
+            _streamingTask = null;
+        }
     }
 
     private static TopLevel? GetTopLevel()
