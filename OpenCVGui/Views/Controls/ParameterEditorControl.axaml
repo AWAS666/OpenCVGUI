@@ -1,79 +1,84 @@
 <UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:OpenCVGui.ViewModels"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:converters="using:Avalonia.Data.Converters"
-             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
-             x:Class="OpenCVGui.Views.Controls.ParameterEditorControl"
-             x:DataType="vm:MainWindowViewModel">
-    <StackPanel>
-        <!-- Load Image Button (shown only if layer has file parameter) -->
-        <Button Content="📁 Load Image" 
-                Command="{Binding LoadImageCommand}"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Center"
-                Padding="10,5"
-                Margin="0,0,0,10"
-                IsVisible="{Binding HasFileParameter}"/>
-        
-        <ScrollViewer MaxHeight="400" 
-                      VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding SelectedLayer.Parameters}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Margin="0,5">
-                            <TextBlock Text="{Binding DisplayName}" 
-                                       FontWeight="SemiBold"
-                                       Margin="0,0,0,2"/>
-                            <TextBlock Text="{Binding Description}" 
-                                       FontSize="10" 
-                                       Foreground="Gray"
-                                       Margin="0,0,0,5"
-                                       TextWrapping="Wrap"/>
-                            
-                            <!-- Numeric with range - Slider -->
-                            <StackPanel>
-                                <Slider Minimum="{Binding RangeAttribute.Minimum}"
-                                        Maximum="{Binding RangeAttribute.Maximum}"
-                                        Value="{Binding Value}"
-                                        TickFrequency="{Binding RangeAttribute.Step}"
-                                        IsSnapToTickEnabled="True">
-                                    <Slider.IsVisible>
-                                        <Binding Path="RangeAttribute" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
-                                    </Slider.IsVisible>
-                                </Slider>
-                                <TextBlock Text="{Binding Value, StringFormat='Value: {0}'}"
-                                           FontSize="10"
-                                           Foreground="Gray"
-                                           Margin="0,2,0,0">
-                                    <TextBlock.IsVisible>
-                                        <Binding Path="RangeAttribute" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
-                                    </TextBlock.IsVisible>
-                                </TextBlock>
-                            </StackPanel>
-                            
-                            <!-- Numeric without range - NumericUpDown -->
-                            <NumericUpDown Value="{Binding Value}"
-                                           IsVisible="{Binding IsNumeric}"/>
-                            
-                            <!-- Boolean - CheckBox -->
-                            <CheckBox IsChecked="{Binding Value}"
-                                      IsVisible="{Binding IsBoolean}"/>
-                            
-                            <!-- Enum - ComboBox -->
-                            <ComboBox ItemsSource="{Binding EnumValues}"
-                                      SelectedItem="{Binding Value}"
-                                      IsVisible="{Binding IsEnum}"/>
-                            
-                            <!-- String - TextBox -->
-                            <TextBox Text="{Binding Value}"
-                                     IsVisible="{Binding IsString}"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-    </StackPanel>
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:OpenCVGui.ViewModels"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:converters="using:Avalonia.Data.Converters"
+			 mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="400"
+			 xmlns:lucideAvalonia="clr-namespace:LucideAvalonia;assembly=LucideAvalonia"
+			 x:Class="OpenCVGui.Views.Controls.ParameterEditorControl"
+			 x:DataType="vm:MainWindowViewModel">
+	<StackPanel>
+		<!-- Load Image Button (shown only if layer has file parameter) -->
+		<Button                 Command="{Binding LoadImageCommand}"
+								HorizontalAlignment="Stretch"
+								HorizontalContentAlignment="Center"
+								Padding="10,5"
+								Margin="0,0,0,10"
+								IsVisible="{Binding HasFileParameter}">
+			<StackPanel Orientation="Horizontal" Spacing="10">
+				<lucideAvalonia:Lucide Icon="Folder" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
+				<TextBlock VerticalAlignment="Center">Load Image</TextBlock>
+			</StackPanel>
+		</Button>
+
+		<ScrollViewer MaxHeight="400"
+					  VerticalScrollBarVisibility="Auto">
+			<ItemsControl ItemsSource="{Binding SelectedLayer.Parameters}">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<StackPanel Margin="0,5">
+							<TextBlock Text="{Binding DisplayName}"
+									   FontWeight="SemiBold"
+									   Margin="0,0,0,2"/>
+							<TextBlock Text="{Binding Description}"
+									   FontSize="10"
+									   Foreground="Gray"
+									   Margin="0,0,0,5"
+									   TextWrapping="Wrap"/>
+
+							<!-- Numeric with range - Slider -->
+							<StackPanel>
+								<Slider Minimum="{Binding RangeAttribute.Minimum}"
+										Maximum="{Binding RangeAttribute.Maximum}"
+										Value="{Binding Value}"
+										TickFrequency="{Binding RangeAttribute.Step}"
+										IsSnapToTickEnabled="True">
+									<Slider.IsVisible>
+										<Binding Path="RangeAttribute" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+									</Slider.IsVisible>
+								</Slider>
+								<TextBlock Text="{Binding Value, StringFormat='Value: {0}'}"
+										   FontSize="10"
+										   Foreground="Gray"
+										   Margin="0,2,0,0">
+									<TextBlock.IsVisible>
+										<Binding Path="RangeAttribute" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+									</TextBlock.IsVisible>
+								</TextBlock>
+							</StackPanel>
+
+							<!-- Numeric without range - NumericUpDown -->
+							<NumericUpDown Value="{Binding Value}"
+										   IsVisible="{Binding IsNumeric}"/>
+
+							<!-- Boolean - CheckBox -->
+							<CheckBox IsChecked="{Binding Value}"
+									  IsVisible="{Binding IsBoolean}"/>
+
+							<!-- Enum - ComboBox -->
+							<ComboBox ItemsSource="{Binding EnumValues}"
+									  SelectedItem="{Binding Value}"
+									  IsVisible="{Binding IsEnum}"/>
+
+							<!-- String - TextBox -->
+							<TextBox Text="{Binding Value}"
+									 IsVisible="{Binding IsString}"/>
+						</StackPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</ScrollViewer>
+	</StackPanel>
 </UserControl>
 
