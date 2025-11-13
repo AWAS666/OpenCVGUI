@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Xml;
 using System.Xml.Serialization;
+using System.IO;
+using System.Linq;
 
 namespace OpenCVGui.Lib.Serialization;
 
@@ -76,7 +78,7 @@ public static class LayerChainSerializer
                     layerData.Parameters.Add(new ParameterData
                     {
                         Name = prop.Name,
-                        Value = ConvertToString(value, prop.PropertyType)
+                        Value = ConvertToString(value, prop.PropertyType, prop)
                     });
                 }
             }
@@ -114,7 +116,7 @@ public static class LayerChainSerializer
                 var paramData = layerData.Parameters.FirstOrDefault(p => p.Name == prop.Name);
                 if (paramData != null)
                 {
-                    var value = ConvertFromString(paramData.Value, prop.PropertyType);
+                    var value = ConvertFromString(paramData.Value, prop.PropertyType, prop);
                     if (value != null)
                     {
                         prop.SetValue(layer, value);
@@ -126,7 +128,7 @@ public static class LayerChainSerializer
         return layer;
     }
 
-    private static string ConvertToString(object value, Type type)
+    private static string ConvertToString(object value, Type type, PropertyInfo? property = null)
     {
         if (type.IsEnum)
         {
@@ -135,19 +137,89 @@ public static class LayerChainSerializer
 
         if (type == typeof(string))
         {
-            return (string)value;
+            var stringValue = (string)value;
+            
+            // Check if this is a file parameter and if it's an image file
+            if (property != null && !string.IsNullOrEmpty(stringValue) && File.Exists(stringValue))
+            {
+                var fileAttr = property.GetCustomAttribute<Attributes.ParameterFileAttribute>();
+                if (fileAttr != null && IsImageFile(fileAttr.Filter))
+                {
+                    // Convert image file to base64
+                    try
+                    {
+                        var imageBytes = File.ReadAllBytes(stringValue);
+                        var base64 = Convert.ToBase64String(imageBytes);
+                        return $"base64:{base64}";
+                    }
+                    catch
+                    {
+                        // If reading fails, fall back to file path
+                        return stringValue;
+                    }
+                }
+            }
+            
+            return stringValue;
         }
 
         return System.Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
     }
 
-    private static object? ConvertFromString(string value, Type type)
+    private static bool IsImageFile(string? filter)
+    {
+        if (string.IsNullOrEmpty(filter))
+            return false;
+
+        // Check if filter contains image file extensions
+        var imageExtensions = new[] { ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".gif", ".webp" };
+        var lowerFilter = filter.ToLowerInvariant();
+        return imageExtensions.Any(ext => lowerFilter.Contains(ext));
+    }
+
+    private static object? ConvertFromString(string value, Type type, PropertyInfo? property = null)
     {
         if (string.IsNullOrEmpty(value))
             return null;
 
         if (type == typeof(string))
         {
+            // Check if this is a base64-encoded image
+            if (value.StartsWith("base64:", StringComparison.Ordinal))
+            {
+                try
+                {
+                    var base64Data = value.Substring(7); // Remove "base64:" prefix
+                    var imageBytes = Convert.FromBase64String(base64Data);
+                    
+                    // Determine file extension based on property's file filter or default to .png
+                    var extension = ".png";
+                    if (property != null)
+                    {
+                        var fileAttr = property.GetCustomAttribute<Attributes.ParameterFileAttribute>();
+                        if (fileAttr != null && !string.IsNullOrEmpty(fileAttr.Filter))
+                        {
+                            // Try to extract extension from filter
+                            var match = System.Text.RegularExpressions.Regex.Match(fileAttr.Filter, @"\*\.(\w+)");
+                            if (match.Success)
+                            {
+                                extension = "." + match.Groups[1].Value;
+                            }
+                        }
+                    }
+                    
+                    // Save to temp file
+                    var tempPath = Path.Combine(Path.GetTempPath(), $"serialized_image_{Guid.NewGuid()}{extension}");
+                    File.WriteAllBytes(tempPath, imageBytes);
+                    return tempPath;
+                }
+                catch
+                {
+                    // If base64 decode fails, return as-is (might be corrupted data)
+                    return value;
+                }
+            }
+            
             return value;
         }
 
