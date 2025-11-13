@@ -31,6 +31,117 @@ public class VideoLayer : BaseLayer
     /// Gets the native FPS of the video file
     /// </summary>
     public double VideoFps => _videoFps;
+    
+    /// <summary>
+    /// Gets the current frame position in the video
+    /// </summary>
+    public long CurrentFramePosition
+    {
+        get
+        {
+            if (_videoCapture != null && _videoCapture.IsOpened())
+            {
+                return (long)_videoCapture.Get(VideoCaptureProperties.PosFrames);
+            }
+            return 0;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the total number of frames in the video
+    /// </summary>
+    public long TotalFrames
+    {
+        get
+        {
+            if (_videoCapture != null && _videoCapture.IsOpened())
+            {
+                return (long)_videoCapture.Get(VideoCaptureProperties.FrameCount);
+            }
+            return 0;
+        }
+    }
+    
+    /// <summary>
+    /// Steps forward one frame in the video
+    /// </summary>
+    public bool StepForward()
+    {
+        if (_videoCapture == null || !_videoCapture.IsOpened())
+        {
+            return false;
+        }
+        
+        long currentFrame = CurrentFramePosition;
+        long totalFrames = TotalFrames;
+        
+        if (currentFrame < totalFrames - 1)
+        {
+            _videoCapture.Set(VideoCaptureProperties.PosFrames, currentFrame + 1);
+            return true;
+        }
+        else if (Loop)
+        {
+            // Loop to beginning
+            _videoCapture.Set(VideoCaptureProperties.PosFrames, 0);
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /// <summary>
+    /// Steps backward one frame in the video
+    /// </summary>
+    public bool StepBackward()
+    {
+        if (_videoCapture == null || !_videoCapture.IsOpened())
+        {
+            return false;
+        }
+        
+        long currentFrame = CurrentFramePosition;
+        long totalFrames = TotalFrames;
+        
+        // PosFrames represents the next frame to be read
+        // If we're at position N, the last frame read was N-1
+        // To go back one frame, we need to set position to N-2 (to read frame N-2, then advance to N-1)
+        // But we need to be careful: if currentFrame is 0, we're at the start
+        // If currentFrame is 1, we want to go to frame 0, so set position to 0
+        
+        if (currentFrame > 1)
+        {
+            // Go back by setting position to currentFrame - 2
+            // This will make the next read be frame (currentFrame - 2), then advance to (currentFrame - 1)
+            _videoCapture.Set(VideoCaptureProperties.PosFrames, currentFrame - 2);
+            return true;
+        }
+        else if (currentFrame == 1)
+        {
+            // We're at position 1, meaning we just read frame 0
+            // To go back, we need to loop to the end if looping is enabled
+            if (Loop && totalFrames > 0)
+            {
+                _videoCapture.Set(VideoCaptureProperties.PosFrames, totalFrames - 1);
+                return true;
+            }
+            // If not looping, we're already at the beginning, can't go back
+            return false;
+        }
+        else if (currentFrame == 0)
+        {
+            // We're at the very beginning
+            if (Loop && totalFrames > 0)
+            {
+                // Loop to end
+                _videoCapture.Set(VideoCaptureProperties.PosFrames, totalFrames - 1);
+                return true;
+            }
+            return false;
+        }
+        
+        return false;
+    }
 
     public override string GetLayerType() => "Video";
 

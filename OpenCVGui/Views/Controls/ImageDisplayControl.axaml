@@ -37,6 +37,30 @@
             <StackPanel Orientation="Horizontal" 
                         HorizontalAlignment="Right"
                         Spacing="5">
+                <!-- Step Backward Button -->
+                <Button Command="{Binding StepFrameBackwardCommand}"
+                        ToolTip.Tip="Step Backward One Frame"
+                        Padding="8"
+                        IsVisible="{Binding CanStepFrames}">
+                    <lucideAvalonia:Lucide Icon="ArrowLeftToLine" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
+                <!-- Step Forward Button -->
+                <Button Command="{Binding StepFrameForwardCommand}"
+                        ToolTip.Tip="Step Forward One Frame"
+                        Padding="8"
+                        IsVisible="{Binding CanStepFrames}">
+                    <lucideAvalonia:Lucide Icon="ArrowRightToLine" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
                 <!-- Pause/Play Button -->
                 <Button Command="{Binding ToggleStreamingPauseCommand}"
                         ToolTip.Tip="{Binding PauseButtonTooltip}"

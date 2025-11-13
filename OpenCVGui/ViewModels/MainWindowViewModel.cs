@@ -72,6 +72,16 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ChainRenderModeIconColor));
         RenderChain();
     }
+    
+    partial void OnIsStreamingPausedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsStreamingPlaying));
+        OnPropertyChanged(nameof(PauseButtonIcon));
+        OnPropertyChanged(nameof(PauseButtonTooltip));
+        OnPropertyChanged(nameof(CanStepFrames));
+        StepFrameForwardCommand.NotifyCanExecuteChanged();
+        StepFrameBackwardCommand.NotifyCanExecuteChanged();
+    }
 
     [RelayCommand]
     private void SetRenderMode(string mode)
@@ -93,6 +103,44 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(PauseButtonIcon));
         OnPropertyChanged(nameof(PauseButtonTooltip));
         OnPropertyChanged(nameof(IsStreamingActive));
+    }
+    
+    public bool CanStepFrames => IsStreamingActive && IsStreamingPaused;
+    
+    [RelayCommand(CanExecute = nameof(CanStepFrames))]
+    private void StepFrameForward()
+    {
+        if (!IsStreamingActive || !IsStreamingPaused)
+            return;
+            
+        var videoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
+            .FirstOrDefault(l => l.IsEnabled && l.Streaming);
+            
+        if (videoLayer != null)
+        {
+            videoLayer.StepForward();
+        }
+        
+        // Trigger a single frame render
+        RenderChain();
+    }
+    
+    [RelayCommand(CanExecute = nameof(CanStepFrames))]
+    private void StepFrameBackward()
+    {
+        if (!IsStreamingActive || !IsStreamingPaused)
+            return;
+            
+        var videoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
+            .FirstOrDefault(l => l.IsEnabled && l.Streaming);
+            
+        if (videoLayer != null)
+        {
+            videoLayer.StepBackward();
+        }
+        
+        // Trigger a single frame render
+        RenderChain();
     }
     
     private bool IsStreamingActiveInternal()
@@ -608,6 +656,9 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StartStreaming(webcamLayer, videoLayer);
             OnPropertyChanged(nameof(IsStreamingActive));
+            OnPropertyChanged(nameof(CanStepFrames));
+            StepFrameForwardCommand.NotifyCanExecuteChanged();
+            StepFrameBackwardCommand.NotifyCanExecuteChanged();
         }
         else if (!hasStreamingLayer && IsStreamingActiveInternal())
         {
@@ -618,6 +669,9 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             // Update streaming parameters if needed (FPS change, etc.)
             // The streaming loop will pick up the new FPS on next iteration
+            OnPropertyChanged(nameof(CanStepFrames));
+            StepFrameForwardCommand.NotifyCanExecuteChanged();
+            StepFrameBackwardCommand.NotifyCanExecuteChanged();
         }
     }
 
@@ -742,8 +796,13 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         
         OnPropertyChanged(nameof(IsStreamingActive));
+        OnPropertyChanged(nameof(IsStreamingPaused));
+        OnPropertyChanged(nameof(IsStreamingPlaying));
         OnPropertyChanged(nameof(PauseButtonIcon));
         OnPropertyChanged(nameof(PauseButtonTooltip));
+        OnPropertyChanged(nameof(CanStepFrames));
+        StepFrameForwardCommand.NotifyCanExecuteChanged();
+        StepFrameBackwardCommand.NotifyCanExecuteChanged();
     }
 
     private static TopLevel? GetTopLevel()
