@@ -547,25 +547,28 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         try
         {
+            // Capture RenderMode at the start to ensure consistency throughout the render
+            // This prevents race conditions when switching modes during streaming
+            var currentRenderMode = RenderMode;
             Mat? result = null;
 
-                if (SelectedLayer != null)
+            if (SelectedLayer != null)
+            {
+                var selectedIndex = Layers.IndexOf(SelectedLayer);
+                if (selectedIndex >= 0)
                 {
-                    var selectedIndex = Layers.IndexOf(SelectedLayer);
-                    if (selectedIndex >= 0)
-                    {
-                        result = _layerChain.RenderUpTo(selectedIndex, _sourceImage, RenderMode);
-                    }
+                    result = _layerChain.RenderUpTo(selectedIndex, _sourceImage, currentRenderMode);
                 }
-                else if (_sourceImage != null)
-                {
-                    result = _sourceImage.Clone();
-                }
-                else if (_layerChain.Count > 0)
-                {
-                    // Render full chain if no selection
-                    result = _layerChain.RenderChain(_sourceImage, RenderMode);
-                }
+            }
+            else if (_sourceImage != null)
+            {
+                result = _sourceImage.Clone();
+            }
+            else if (_layerChain.Count > 0)
+            {
+                // Render full chain if no selection
+                result = _layerChain.RenderChain(_sourceImage, currentRenderMode);
+            }
 
             var bitmap = ImageConverter.MatToBitmapSafe(result);
             

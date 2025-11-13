@@ -118,38 +118,103 @@ public class LayerChain
             // and UI output from previous layers (for visualization)
             Mat? chainOutput = inputImage;
             Mat? uiOutput = inputImage;
+            Mat? result = null;
+            List<Mat> intermediateMats = new List<Mat>();
 
-            // Render all previous layers in Chain mode to get processing output
-            for (int i = 0; i < layerIndex; i++)
+            try
             {
-                var layer = _layers[i];
-                if (layer.IsEnabled)
+                // Render all previous layers in Chain mode to get processing output
+                for (int i = 0; i < layerIndex; i++)
                 {
-                    chainOutput = layer.Render(chainOutput, RenderMode.Chain);
+                    var layer = _layers[i];
+                    if (layer.IsEnabled)
+                    {
+                        var newChainOutput = layer.Render(chainOutput, RenderMode.Chain);
+                        // Track intermediate results for disposal (but not inputImage)
+                        if (chainOutput != inputImage && chainOutput != null)
+                        {
+                            intermediateMats.Add(chainOutput);
+                        }
+                        chainOutput = newChainOutput;
+                    }
                 }
-            }
 
-            // Render previous layers in UI mode to get visualization output
-            for (int i = 0; i < layerIndex; i++)
-            {
-                var layer = _layers[i];
-                if (layer.IsEnabled)
+                // Render previous layers in UI mode to get visualization output
+                for (int i = 0; i < layerIndex; i++)
                 {
-                    uiOutput = layer.Render(uiOutput, RenderMode.UI);
+                    var layer = _layers[i];
+                    if (layer.IsEnabled)
+                    {
+                        var newUiOutput = layer.Render(uiOutput, RenderMode.UI);
+                        // Track intermediate results for disposal (but not inputImage)
+                        if (uiOutput != inputImage && uiOutput != null)
+                        {
+                            intermediateMats.Add(uiOutput);
+                        }
+                        uiOutput = newUiOutput;
+                    }
                 }
-            }
 
-            // Render current layer in UI mode, passing both UI output (for drawing)
-            // and chain output (for processing)
-            var currentLayer = _layers[layerIndex];
-            if (currentLayer.IsEnabled)
+                // Render current layer in UI mode, passing both UI output (for drawing)
+                // and chain output (for processing)
+                var currentLayer = _layers[layerIndex];
+                if (currentLayer.IsEnabled)
+                {
+                    // Pass uiOutput as the main input (for visualization/drawing)
+                    // and chainOutput as chainInput (for processing)
+                    result = currentLayer.Render(uiOutput, RenderMode.UI, chainOutput);
+                }
+                else
+                {
+                    result = uiOutput?.Clone() ?? new Mat();
+                }
+
+                // Cleanup intermediate results (they've been cloned or used)
+                // Don't dispose chainOutput or uiOutput if they're the same as result
+                if (chainOutput != inputImage && chainOutput != null && chainOutput != result)
+                {
+                    intermediateMats.Add(chainOutput);
+                }
+                if (uiOutput != inputImage && uiOutput != null && uiOutput != result)
+                {
+                    intermediateMats.Add(uiOutput);
+                }
+
+                // Dispose all intermediate Mat objects
+                foreach (var mat in intermediateMats)
+                {
+                    if (mat != null && !mat.IsDisposed)
+                    {
+                        mat.Dispose();
+                    }
+                }
+
+                return result ?? new Mat();
+            }
+            catch
             {
-                // Pass uiOutput as the main input (for visualization/drawing)
-                // and chainOutput as chainInput (for processing)
-                return currentLayer.Render(uiOutput, RenderMode.UI, chainOutput);
+                // Cleanup on error
+                foreach (var mat in intermediateMats)
+                {
+                    if (mat != null && !mat.IsDisposed)
+                    {
+                        mat.Dispose();
+                    }
+                }
+                if (chainOutput != inputImage && chainOutput != null && !chainOutput.IsDisposed)
+                {
+                    chainOutput.Dispose();
+                }
+                if (uiOutput != inputImage && uiOutput != null && !uiOutput.IsDisposed)
+                {
+                    uiOutput.Dispose();
+                }
+                if (result != null && !result.IsDisposed)
+                {
+                    result.Dispose();
+                }
+                throw;
             }
-
-            return uiOutput ?? new Mat();
         }
         else
         {
