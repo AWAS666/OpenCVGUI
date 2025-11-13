@@ -1,5 +1,8 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace OpenCVGui.Lib.Transform;
 
@@ -33,7 +36,7 @@ public class ImageRotationLayer : BaseLayer
         Size outputSize;
         if (ExpandToFit)
         {
-            // Calculate the bounding box of the rotated image
+            // Calculate the bounding box of the rotated image corners
             var corners = new Point2f[]
             {
                 new(0, 0),
@@ -42,26 +45,36 @@ public class ImageRotationLayer : BaseLayer
                 new(0, input.Height)
             };
 
-            var rotatedCorners = corners.Select(corner =>
+            var rotatedCorners = new List<Point2f>();
+            foreach (var corner in corners)
             {
-                var point = new Mat(3, 1, MatType.CV_32FC1);
-                point.Set<float>(0, 0, corner.X - center.X);
-                point.Set<float>(1, 0, corner.Y - center.Y);
-                point.Set<float>(2, 0, 1);
-
-                var rotatedExpr = rotationMatrix * point;
-                var rotated = new Mat(rotatedExpr);
-                return new Point2f(rotated.Get<float>(0, 0) + center.X, rotated.Get<float>(1, 0) + center.Y);
-            }).ToArray();
+                // Transform corner using rotation matrix
+                var x = corner.X - center.X;
+                var y = corner.Y - center.Y;
+                
+                // Apply rotation: [cos -sin] [x]   [sin cos] [y]
+                var angleRad = Angle * Math.PI / 180.0;
+                var cos = Math.Cos(angleRad);
+                var sin = Math.Sin(angleRad);
+                
+                var rotatedX = x * cos - y * sin;
+                var rotatedY = x * sin + y * cos;
+                
+                rotatedCorners.Add(new Point2f((float)(rotatedX + center.X), (float)(rotatedY + center.Y)));
+            }
 
             var minX = rotatedCorners.Min(c => c.X);
             var maxX = rotatedCorners.Max(c => c.X);
             var minY = rotatedCorners.Min(c => c.Y);
             var maxY = rotatedCorners.Max(c => c.Y);
 
-            outputSize = new Size((int)(maxX - minX), (int)(maxY - minY));
-            rotationMatrix.Set<double>(0, 2, rotationMatrix.Get<double>(0, 2) - minX);
-            rotationMatrix.Set<double>(1, 2, rotationMatrix.Get<double>(1, 2) - minY);
+            outputSize = new Size((int)Math.Ceiling(maxX - minX), (int)Math.Ceiling(maxY - minY));
+            
+            // Adjust translation to account for the new bounding box
+            var tx = rotationMatrix.Get<double>(0, 2);
+            var ty = rotationMatrix.Get<double>(1, 2);
+            rotationMatrix.Set<double>(0, 2, tx - minX);
+            rotationMatrix.Set<double>(1, 2, ty - minY);
         }
         else
         {
