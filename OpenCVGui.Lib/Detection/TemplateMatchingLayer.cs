@@ -39,12 +39,16 @@ public class TemplateMatchingLayer : BaseLayer
     [ParameterRange(-1, 10, 1)]
     public int LineThickness { get; set; } = 2;
 
+    [Parameter(DisplayName = "Debug Mode", Description = "Show debug information on output (UI mode only)", Order = 8)]
+    public bool DebugMode { get; set; } = false;
+
     /// <summary>
     /// Number of matches found in the last render
     /// </summary>
     public int MatchCount { get; private set; }
 
     private Mat? _cachedTemplate;
+    private string _lastTemplatePath = string.Empty;
 
     public override string GetLayerType() => "TemplateMatching";
 
@@ -57,9 +61,10 @@ public class TemplateMatchingLayer : BaseLayer
         }
 
         // Load template if path changed
-        if (_cachedTemplate == null || !string.IsNullOrEmpty(TemplateImagePath))
+        if (_cachedTemplate == null || _lastTemplatePath != TemplateImagePath)
         {
             LoadTemplate();
+            _lastTemplatePath = TemplateImagePath ?? string.Empty;
         }
 
         if (_cachedTemplate == null || _cachedTemplate.Empty())
@@ -75,9 +80,46 @@ public class TemplateMatchingLayer : BaseLayer
             return input.Clone();
         }
 
+        // Ensure template and input have the same number of channels
+        Mat templateToUse = _cachedTemplate;
+        Mat inputToUse = input;
+        bool needsCleanup = false;
+
+        if (input.Channels() != _cachedTemplate.Channels())
+        {
+            if (input.Channels() == 1)
+            {
+                // Input is grayscale, convert template to grayscale
+                templateToUse = new Mat();
+                if (_cachedTemplate.Channels() == 3)
+                {
+                    Cv2.CvtColor(_cachedTemplate, templateToUse, ColorConversionCodes.BGR2GRAY);
+                }
+                else
+                {
+                    templateToUse = _cachedTemplate.Clone();
+                }
+                needsCleanup = true;
+            }
+            else if (input.Channels() == 3)
+            {
+                // Input is color, convert template to color
+                templateToUse = new Mat();
+                if (_cachedTemplate.Channels() == 1)
+                {
+                    Cv2.CvtColor(_cachedTemplate, templateToUse, ColorConversionCodes.GRAY2BGR);
+                }
+                else
+                {
+                    templateToUse = _cachedTemplate.Clone();
+                }
+                needsCleanup = true;
+            }
+        }
+
         // Perform template matching
         Mat resultMat = new Mat();
-        Cv2.MatchTemplate(input, _cachedTemplate, resultMat, MatchMethod);
+        Cv2.MatchTemplate(inputToUse, templateToUse, resultMat, MatchMethod);
 
         // Find matches based on threshold
         List<Point> matchLocations = new List<Point>();
@@ -94,7 +136,16 @@ public class TemplateMatchingLayer : BaseLayer
         {
             for (int x = 0; x < resultMat.Width; x++)
             {
-                double value = resultMat.Get<double>(y, x);
+                double value;
+                if (resultMat.Type() == MatType.CV_32F)
+                {
+                    value = resultMat.Get<float>(y, x);
+                }
+                else
+                {
+                    value = resultMat.Get<double>(y, x);
+                }
+                
                 bool isMatch = higherIsBetter ? value >= MatchThreshold : value <= MatchThreshold;
 
                 if (isMatch)
@@ -108,7 +159,7 @@ public class TemplateMatchingLayer : BaseLayer
         // Apply non-maximum suppression if enabled
         if (UseNonMaxSuppression && matchLocations.Count > 0)
         {
-            var filtered = ApplyNonMaxSuppression(matchLocations, matchValues, _cachedTemplate.Size(), OverlapThreshold, higherIsBetter);
+            var filtered = ApplyNonMaxSuppression(matchLocations, matchValues, templateToUse.Size(), OverlapThreshold, higherIsBetter);
             matchLocations = filtered.locations;
             matchValues = filtered.values;
         }
@@ -123,12 +174,41 @@ public class TemplateMatchingLayer : BaseLayer
             var matchColor = new Scalar(b, g, r);
             foreach (var location in matchLocations)
             {
-                var rect = new Rect(location, _cachedTemplate.Size());
+                var rect = new Rect(location, templateToUse.Size());
                 Cv2.Rectangle(result, rect, matchColor, LineThickness);
             }
         }
 
+        // Draw debug information in UI mode only
+        if (DebugMode && renderMode == RenderMode.UI && matchLocations.Count > 0)
+        {
+            var (b, g, r) = ColorUtils.HexToBgr(MatchColorHex);
+            var debugColor = new Scalar(b, g, r);
+            
+            for (int i = 0; i < matchLocations.Count && i < matchValues.Count; i++)
+            {
+                var location = matchLocations[i];
+                var value = matchValues[i];
+                var text = $"{value:F3}";
+                var textSize = Cv2.GetTextSize(text, HersheyFonts.HersheySimplex, 0.5, 1, out int baseline);
+                var textPos = new Point(location.X, location.Y - 5);
+                
+                // Draw text background
+                Cv2.Rectangle(result, 
+                    new Rect(textPos.X - 2, textPos.Y - textSize.Height - 2, textSize.Width + 4, textSize.Height + 4),
+                    new Scalar(0, 0, 0), -1);
+                
+                // Draw match value text
+                Cv2.PutText(result, text, textPos, HersheyFonts.HersheySimplex, 0.5, debugColor, 1);
+            }
+        }
+
         resultMat.Dispose();
+        
+        if (needsCleanup && templateToUse != _cachedTemplate)
+        {
+            templateToUse.Dispose();
+        }
 
         return result;
     }
@@ -141,15 +221,29 @@ public class TemplateMatchingLayer : BaseLayer
             _cachedTemplate = null;
         }
 
-        if (string.IsNullOrEmpty(TemplateImagePath) || !File.Exists(TemplateImagePath))
+        if (string.IsNullOrEmpty(TemplateImagePath))
         {
             return;
         }
 
-        _cachedTemplate = Cv2.ImRead(TemplateImagePath, ImreadModes.Color);
-        if (_cachedTemplate != null && _cachedTemplate.Empty())
+        if (!File.Exists(TemplateImagePath))
         {
-            _cachedTemplate.Dispose();
+            return;
+        }
+
+        try
+        {
+            _cachedTemplate = Cv2.ImRead(TemplateImagePath, ImreadModes.Color);
+            if (_cachedTemplate == null || _cachedTemplate.Empty())
+            {
+                _cachedTemplate?.Dispose();
+                _cachedTemplate = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error loading template: {ex.Message}");
+            _cachedTemplate?.Dispose();
             _cachedTemplate = null;
         }
     }
@@ -214,4 +308,5 @@ public class TemplateMatchingLayer : BaseLayer
         _cachedTemplate = null;
     }
 }
+
 
