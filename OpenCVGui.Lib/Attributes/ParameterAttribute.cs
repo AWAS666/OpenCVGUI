@@ -88,3 +88,11 @@ public class ParameterColorAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Marks a parameter as accepting cropped image samples from the displayed image
+/// </summary>
+[AttributeUsage(AttributeTargets.Property)]
+public class ParameterImageSampleAttribute : Attribute
+{
+}
+

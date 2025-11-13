@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:OpenCVGui.ViewModels"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:lucideAvalonia="clr-namespace:LucideAvalonia;assembly=LucideAvalonia"
+			 mc:Ignorable="d"
+			 x:Class="OpenCVGui.Views.Controls.ParameterEditors.ImageSampleParameterEditor"
+			 x:DataType="vm:ParameterProperty">
+	<StackPanel Spacing="5">
+		<!-- Sample Thumbnail -->
+		<Border BorderBrush="#3E3E3E"
+				BorderThickness="1"
+				Background="#1E1E1E"
+				HorizontalAlignment="Stretch"
+				Height="100"
+				IsVisible="{Binding HasSample}">
+			<Grid>
+				<Image Source="{Binding SamplePreviewBitmap}"
+					   Stretch="Uniform"
+					   HorizontalAlignment="Center"
+					   VerticalAlignment="Center"
+					   MaxWidth="90"
+					   MaxHeight="90"/>
+				<StackPanel HorizontalAlignment="Center"
+							VerticalAlignment="Bottom"
+							Margin="0,0,0,5"
+							Spacing="2">
+					<TextBlock Text="{Binding SampleDimensions}"
+							   FontSize="9"
+							   Foreground="White"
+							   Background="#80000000"
+							   Padding="3,1"
+							   HorizontalAlignment="Center"/>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!-- Crop from Image Button -->
+		<Button x:Name="CropFromImageButton"
+				Click="CropFromImageButton_Click"
+				HorizontalAlignment="Stretch"
+				HorizontalContentAlignment="Center"
+				Padding="10,5">
+			<StackPanel Orientation="Horizontal" Spacing="10">
+				<lucideAvalonia:Lucide Icon="Crop" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
+				<TextBlock VerticalAlignment="Center">Crop from Image</TextBlock>
+			</StackPanel>
+		</Button>
+
+		<!-- Clear Sample Button -->
+		<Button x:Name="ClearSampleButton"
+				Click="ClearSampleButton_Click"
+				HorizontalAlignment="Stretch"
+				HorizontalContentAlignment="Center"
+				Padding="10,5"
+				IsVisible="{Binding HasSample}">
+			<StackPanel Orientation="Horizontal" Spacing="10">
+				<lucideAvalonia:Lucide Icon="X" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
+				<TextBlock VerticalAlignment="Center">Clear Sample</TextBlock>
+			</StackPanel>
+		</Button>
+	</StackPanel>
+</UserControl>
+

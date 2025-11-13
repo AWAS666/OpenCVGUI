@@ -22,6 +22,7 @@ public class ParameterEditorTemplateSelector : IDataTemplate
 
         UserControl editor = parameter.EditorType switch
         {
+            "ImageSample" => new ImageSampleParameterEditor(),
             "Slider" => new SliderParameterEditor(),
             "Color" => new ColorParameterEditor(),
             "Enum" => new EnumParameterEditor(),

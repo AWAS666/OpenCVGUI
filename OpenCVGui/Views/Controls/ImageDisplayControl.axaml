@@ -20,27 +20,41 @@
                 BorderBrush="#3E3E3E" 
                 BorderThickness="1"
                 x:Name="ImageContainer">
-            <ScrollViewer x:Name="ImageScrollViewer"
-                          HorizontalScrollBarVisibility="Auto" 
-                          VerticalScrollBarVisibility="Auto">
-                <Border x:Name="ImageBorder"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
-                    <Image x:Name="DisplayImageControl"
-                           Source="{Binding DisplayImage}" 
-                           Stretch="None"
-                           RenderTransformOrigin="0.5,0.5">
-                        <Image.RenderTransform>
-                            <TransformGroup>
-                                <ScaleTransform ScaleX="{Binding ZoomLevel}" 
-                                               ScaleY="{Binding ZoomLevel}"/>
-                                <TranslateTransform X="{Binding PanX}" 
-                                                   Y="{Binding PanY}"/>
-                            </TransformGroup>
-                        </Image.RenderTransform>
-                    </Image>
-                </Border>
-            </ScrollViewer>
+            <Grid>
+                <ScrollViewer x:Name="ImageScrollViewer"
+                              HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Auto">
+                    <Border x:Name="ImageBorder"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                        <Image x:Name="DisplayImageControl"
+                               Source="{Binding DisplayImage}" 
+                               Stretch="None"
+                               RenderTransformOrigin="0.5,0.5">
+                            <Image.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform ScaleX="{Binding ZoomLevel}" 
+                                                   ScaleY="{Binding ZoomLevel}"/>
+                                    <TranslateTransform X="{Binding PanX}" 
+                                                       Y="{Binding PanY}"/>
+                                </TransformGroup>
+                            </Image.RenderTransform>
+                        </Image>
+                    </Border>
+                </ScrollViewer>
+                
+                <!-- Crop Selection Rectangle Overlay -->
+                <Canvas x:Name="CropOverlayCanvas"
+                        IsVisible="{Binding IsCropMode}"
+                        IsHitTestVisible="False">
+                    <Rectangle x:Name="CropSelectionRectangle"
+                               Stroke="#00FF00"
+                               StrokeThickness="2"
+                               StrokeDashArray="4,4"
+                               Fill="#4000FF00"
+                               IsVisible="False"/>
+                </Canvas>
+            </Grid>
         </Border>
         
         <!-- Bottom Toolbar -->
@@ -52,6 +66,30 @@
             <StackPanel Orientation="Horizontal" 
                         HorizontalAlignment="Right"
                         Spacing="5">
+                <!-- Crop Apply Button -->
+                <Button Command="{Binding ApplyCropCommand}"
+                        ToolTip.Tip="Apply Crop"
+                        Padding="8"
+                        IsVisible="{Binding IsCropMode}">
+                    <lucideAvalonia:Lucide Icon="Check" 
+                                           StrokeBrush="#00FF00" 
+                                           StrokeThickness="2" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
+                <!-- Crop Cancel Button -->
+                <Button Command="{Binding CancelCropCommand}"
+                        ToolTip.Tip="Cancel Crop"
+                        Padding="8"
+                        IsVisible="{Binding IsCropMode}">
+                    <lucideAvalonia:Lucide Icon="X" 
+                                           StrokeBrush="#FF0000" 
+                                           StrokeThickness="2" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
                 <!-- Step Backward Button -->
                 <Button Command="{Binding StepFrameBackwardCommand}"
                         ToolTip.Tip="Step Backward One Frame"

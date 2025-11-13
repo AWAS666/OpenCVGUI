@@ -45,6 +45,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private RenderMode _renderMode = RenderMode.UI;
 
+    [ObservableProperty]
+    private bool _isCropMode = false;
+
+    [ObservableProperty]
+    private ImageCropData? _currentCropData;
+
+    [ObservableProperty]
+    private ParameterProperty? _targetCropParameter;
+
     public bool IsUIRenderMode => RenderMode == RenderMode.UI;
     
     public bool IsChainRenderMode => RenderMode == RenderMode.Chain;
@@ -188,12 +197,157 @@ public partial class MainWindowViewModel : ViewModelBase
         StepFrameBackwardCommand.NotifyCanExecuteChanged();
     }
 
+    partial void OnIsCropModeChanged(bool value)
+    {
+        if (!value)
+        {
+            // Clean up when exiting crop mode
+            CancelCrop();
+        }
+    }
+
     [RelayCommand]
     private void SetRenderMode(string mode)
     {
         if (Enum.TryParse<RenderMode>(mode, out var renderMode))
         {
             RenderMode = renderMode;
+        }
+    }
+
+    [RelayCommand]
+    private void StartCrop(ParameterProperty? parameter)
+    {
+        if (parameter == null)
+        {
+            System.Diagnostics.Debug.WriteLine("StartCrop: parameter is null");
+            return;
+        }
+
+        if (DisplayImage == null)
+        {
+            System.Diagnostics.Debug.WriteLine("StartCrop: DisplayImage is null");
+            return;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"StartCrop: Starting crop mode for parameter {parameter.PropertyName}");
+        TargetCropParameter = parameter;
+        IsCropMode = true;
+        CurrentCropData = null;
+        OnPropertyChanged(nameof(IsCropMode));
+    }
+
+    [RelayCommand]
+    private void ApplyCrop()
+    {
+        if (TargetCropParameter == null || CurrentCropData == null)
+            return;
+
+        try
+        {
+            // Store the cropped image as a Mat
+            // For now, we'll store it directly if the property type is Mat
+            // Otherwise, we might need to serialize it
+            if (TargetCropParameter.PropertyType == typeof(Mat))
+            {
+                TargetCropParameter.Value = CurrentCropData.CroppedImage.Clone();
+            }
+            else if (TargetCropParameter.PropertyType == typeof(byte[]))
+            {
+                // Convert Mat to byte array (PNG format)
+                var encoded = CurrentCropData.CroppedImage.ImEncode(".png");
+                TargetCropParameter.Value = encoded;
+            }
+            else if (TargetCropParameter.PropertyType == typeof(string))
+            {
+                // Save to temp file and store path
+                var tempPath = Path.Combine(Path.GetTempPath(), $"crop_{Guid.NewGuid()}.png");
+                Cv2.ImWrite(tempPath, CurrentCropData.CroppedImage);
+                TargetCropParameter.Value = tempPath;
+            }
+
+            CancelCrop();
+            OnPropertyChanged(nameof(IsCropMode));
+            RenderChain();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error applying crop: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void CancelCrop()
+    {
+        IsCropMode = false;
+        TargetCropParameter = null;
+        CurrentCropData?.Dispose();
+        CurrentCropData = null;
+        OnPropertyChanged(nameof(IsCropMode));
+    }
+
+    public void SetCropSelection(int x, int y, int width, int height)
+    {
+        if (!IsCropMode || DisplayImage == null)
+            return;
+
+        try
+        {
+            // Get the current rendered image Mat
+            Mat? sourceMat = null;
+            
+            if (SelectedLayer != null)
+            {
+                var selectedIndex = Layers.IndexOf(SelectedLayer);
+                if (selectedIndex >= 0)
+                {
+                    sourceMat = _layerChain.RenderUpTo(selectedIndex, _sourceImage, RenderMode.Chain);
+                }
+            }
+            else if (_sourceImage != null && !_sourceImage.Empty())
+            {
+                sourceMat = _sourceImage.Clone();
+            }
+            else if (_layerChain.Count > 0)
+            {
+                sourceMat = _layerChain.RenderChain(_sourceImage, RenderMode.Chain);
+            }
+
+            if (sourceMat == null || sourceMat.Empty())
+            {
+                sourceMat?.Dispose();
+                return;
+            }
+
+            // Ensure coordinates are within image bounds
+            var imgWidth = sourceMat.Width;
+            var imgHeight = sourceMat.Height;
+            
+            x = Math.Max(0, Math.Min(x, imgWidth - 1));
+            y = Math.Max(0, Math.Min(y, imgHeight - 1));
+            width = Math.Max(1, Math.Min(width, imgWidth - x));
+            height = Math.Max(1, Math.Min(height, imgHeight - y));
+
+            // Extract the cropped region
+            var rect = new Rect(x, y, width, height);
+            var cropped = new Mat(sourceMat, rect);
+            
+            // Dispose old crop data if exists
+            CurrentCropData?.Dispose();
+            
+            CurrentCropData = new ImageCropData(cropped.Clone(), x, y, width, height);
+            
+            // Clean up temporary source mat
+            if (sourceMat != _sourceImage)
+            {
+                sourceMat.Dispose();
+            }
+            
+            OnPropertyChanged(nameof(CurrentCropData));
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error setting crop selection: {ex.Message}");
         }
     }
 

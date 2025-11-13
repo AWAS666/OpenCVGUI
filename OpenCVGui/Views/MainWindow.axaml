@@ -72,10 +72,13 @@
             </Grid.ColumnDefinitions>
 
             <!-- Image Display Area (Center) -->
-            <controls:ImageDisplayControl Grid.Column="0" Margin="5"/>
+            <controls:ImageDisplayControl Grid.Column="0" 
+                                          Margin="5"
+                                          DataContext="{Binding}"/>
 
             <!-- Layer Panel (Right) -->
-            <Grid Grid.Column="1" Margin="5">
+            <Grid Grid.Column="1" 
+                  Margin="5">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>

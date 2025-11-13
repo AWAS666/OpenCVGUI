@@ -3,6 +3,9 @@ using OpenCVGui.Lib.Attributes;
 using System;
 using System.Reflection;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using OpenCvSharp;
+using OpenCVGui.Utils;
 
 namespace OpenCVGui.ViewModels;
 
@@ -75,6 +78,14 @@ public partial class ParameterProperty : ObservableObject
             {
                 OnPropertyChanged(nameof(ColorValue));
             }
+            
+            // If this is an image sample property, notify HasSample, SampleDimensions, and SamplePreviewBitmap changed
+            if (IsImageSample)
+            {
+                OnPropertyChanged(nameof(HasSample));
+                OnPropertyChanged(nameof(SampleDimensions));
+                OnPropertyChanged(nameof(SamplePreviewBitmap));
+            }
         }
     }
 
@@ -113,6 +124,13 @@ public partial class ParameterProperty : ObservableObject
         return _propertyInfo.GetCustomAttribute<ParameterFileAttribute>();
     }
 
+    public ParameterImageSampleAttribute? GetImageSampleAttribute()
+    {
+        return _propertyInfo.GetCustomAttribute<ParameterImageSampleAttribute>();
+    }
+
+    public bool IsImageSample => GetImageSampleAttribute() != null;
+
     public bool IsColor => _propertyInfo.GetCustomAttribute<ParameterColorAttribute>() != null;
 
     public bool IsEnum => PropertyType.IsEnum;
@@ -132,6 +150,8 @@ public partial class ParameterProperty : ObservableObject
     {
         get
         {
+            if (IsImageSample)
+                return "ImageSample";
             if (RangeAttribute != null && IsNumeric)
                 return "Slider";
             if (IsColor)
@@ -223,6 +243,124 @@ public partial class ParameterProperty : ObservableObject
     private static string ColorToHex(Color color)
     {
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+    }
+
+    public bool HasSample
+    {
+        get
+        {
+            if (!IsImageSample)
+                return false;
+
+            var value = Value;
+            if (value == null)
+                return false;
+
+            if (value is Mat mat)
+                return !mat.Empty();
+            
+            if (value is byte[] bytes)
+                return bytes.Length > 0;
+            
+            if (value is string str)
+                return !string.IsNullOrWhiteSpace(str);
+
+            return false;
+        }
+    }
+
+    public string SampleDimensions
+    {
+        get
+        {
+            if (!HasSample)
+                return string.Empty;
+
+            try
+            {
+                var value = Value;
+                if (value is Mat mat && !mat.Empty())
+                {
+                    return $"{mat.Width} × {mat.Height}";
+                }
+                else if (value is byte[] bytes && bytes.Length > 0)
+                {
+                    // Try to decode to get dimensions
+                    var tempMat = Cv2.ImDecode(bytes, ImreadModes.Color);
+                    if (!tempMat.Empty())
+                    {
+                        var dims = $"{tempMat.Width} × {tempMat.Height}";
+                        tempMat.Dispose();
+                        return dims;
+                    }
+                }
+                else if (value is string path && !string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                {
+                    var mat1 = Cv2.ImRead(path, ImreadModes.Color);
+                    if (!mat1.Empty())
+                    {
+                        var dims = $"{mat1.Width} × {mat1.Height}";
+                        mat1.Dispose();
+                        return dims;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
+
+            return "Unknown";
+        }
+    }
+
+    public Bitmap? SamplePreviewBitmap
+    {
+        get
+        {
+            if (!HasSample)
+                return null;
+
+            try
+            {
+                var value = Value;
+                Mat? mat = null;
+                bool shouldDisposeMat = false;
+
+                if (value is Mat m && !m.Empty())
+                {
+                    // Don't clone - use directly, we don't own it
+                    mat = m;
+                    shouldDisposeMat = false;
+                }
+                else if (value is byte[] bytes && bytes.Length > 0)
+                {
+                    mat = Cv2.ImDecode(bytes, ImreadModes.Color);
+                    shouldDisposeMat = true;
+                }
+                else if (value is string path && !string.IsNullOrWhiteSpace(path) && System.IO.File.Exists(path))
+                {
+                    mat = Cv2.ImRead(path, ImreadModes.Color);
+                    shouldDisposeMat = true;
+                }
+
+                if (mat != null && !mat.Empty())
+                {
+                    var bitmap = ImageConverter.MatToBitmapSafe(mat);
+                    if (shouldDisposeMat)
+                    {
+                        mat.Dispose();
+                    }
+                    return bitmap;
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
+
+            return null;
+        }
     }
 }
 

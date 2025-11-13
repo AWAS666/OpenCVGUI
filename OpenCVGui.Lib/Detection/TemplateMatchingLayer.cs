@@ -10,6 +10,7 @@ public class TemplateMatchingLayer : BaseLayer
 {
     [Parameter(DisplayName = "Template Image Path", Description = "Path to the template image file to search for", Order = 0)]
     [ParameterFile(Filter = "Image files|*.png;*.jpg;*.jpeg;*.bmp;*.tiff;*.tif;*.gif")]
+    [ParameterImageSample]
     public string TemplateImagePath { get; set; } = string.Empty;
 
     [Parameter(DisplayName = "Match Method", Description = "Template matching method to use", Order = 1)]
