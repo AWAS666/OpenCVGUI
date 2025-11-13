@@ -671,6 +671,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Moves a layer from one position to another (used for drag and drop reordering)
+    /// </summary>
+    public void MoveLayer(int fromIndex, int toIndex)
+    {
+        if (fromIndex < 0 || fromIndex >= Layers.Count)
+            return;
+        if (toIndex < 0 || toIndex >= Layers.Count)
+            return;
+        if (fromIndex == toIndex)
+            return;
+
+        _layerChain.MoveLayer(fromIndex, toIndex);
+        Layers.Move(fromIndex, toIndex);
+        RenderChain();
+    }
+
     [RelayCommand]
     private async Task SaveChainAsync()
     {

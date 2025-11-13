@@ -15,17 +15,27 @@
         <ListBox Grid.Row="0"
                  ItemsSource="{Binding Layers}"
                  SelectedItem="{Binding SelectedLayer}"
-                 SelectionMode="Single">
+                 SelectionMode="Single"
+                 x:Name="LayerListBox"
+                 DragDrop.AllowDrop="True"
+                 DragDrop.DragOver="LayerListBox_DragOver"
+                 DragDrop.Drop="LayerListBox_Drop">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Border Padding="5"
-                            Margin="0,2">
+                            Margin="0,2"
+                            x:Name="LayerItemBorder"
+                            Cursor="Hand"
+                            Background="Transparent"
+                            PointerPressed="LayerItemBorder_PointerPressed"
+                            PointerMoved="LayerItemBorder_PointerMoved"
+                            PointerReleased="LayerItemBorder_PointerReleased">
                         <Border.Styles>
                             <Style Selector="Border:selected">
                                 <Setter Property="Background" Value="#3E3E3E"/>
                             </Style>
                         </Border.Styles>
-                        <Grid>
+                        <Grid Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>

@@ -1,13 +1,8 @@
 ## Todo
 auto code gen
 translations
-drag and drop of layers
+better save file structure, zip
+hotkeys to remove layer
+button to read selected layer again
 
-## layer
-- binary threshold
-- noise and blur
-- drawings like line, rectangle, circle
-- crop
-- canny
-- morphs
-- stream video
+implement further opencv layers -> check
