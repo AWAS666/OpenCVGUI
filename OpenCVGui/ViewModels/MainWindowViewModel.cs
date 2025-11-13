@@ -115,6 +115,85 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task ExportImageAsync()
+    {
+        if (DisplayImage == null)
+            return;
+
+        var topLevel = GetTopLevel();
+        if (topLevel == null)
+            return;
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Image",
+            DefaultExtension = "png",
+            SuggestedFileName = "exported_image.png",
+            FileTypeChoices = new[]
+            {
+                new FilePickerFileType("PNG Image")
+                {
+                    Patterns = new[] { "*.png" }
+                },
+                new FilePickerFileType("JPEG Image")
+                {
+                    Patterns = new[] { "*.jpg", "*.jpeg" }
+                },
+                new FilePickerFileType("BMP Image")
+                {
+                    Patterns = new[] { "*.bmp" }
+                }
+            }
+        });
+
+        if (file != null && file.Path.IsFile)
+        {
+            try
+            {
+                // Get the current rendered result
+                Mat? result = null;
+                if (SelectedLayer != null)
+                {
+                    var selectedIndex = Layers.IndexOf(SelectedLayer);
+                    if (selectedIndex >= 0)
+                    {
+                        result = _layerChain.RenderUpTo(selectedIndex, _sourceImage);
+                    }
+                }
+                else if (_sourceImage != null)
+                {
+                    result = _sourceImage.Clone();
+                }
+                else if (_layerChain.Count > 0)
+                {
+                    result = _layerChain.RenderChain(_sourceImage);
+                }
+
+                if (result != null && !result.Empty())
+                {
+                    var filePath = file.Path.LocalPath;
+                    var extension = Path.GetExtension(filePath).ToLowerInvariant();
+                    
+                    if (extension == ".jpg" || extension == ".jpeg")
+                    {
+                        Cv2.ImWrite(filePath, result, new int[] { (int)ImwriteFlags.JpegQuality, 95 });
+                    }
+                    else
+                    {
+                        // PNG, BMP, and other formats
+                        Cv2.ImWrite(filePath, result);
+                    }
+                    result.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error exporting image: {ex.Message}");
+            }
+        }
+    }
+
     [ObservableProperty]
     private LayerTypeItem? _selectedLayerType;
 

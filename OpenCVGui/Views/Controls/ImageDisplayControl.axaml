@@ -1,21 +1,59 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:OpenCVGui.ViewModels"
+             xmlns:converters="using:Avalonia.Data.Converters"
+             xmlns:lucideAvalonia="clr-namespace:LucideAvalonia;assembly=LucideAvalonia"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
              x:Class="OpenCVGui.Views.Controls.ImageDisplayControl"
              x:DataType="vm:MainWindowViewModel">
-    <Border Background="#1E1E1E" 
-            BorderBrush="#3E3E3E" 
-            BorderThickness="1">
-        <ScrollViewer HorizontalScrollBarVisibility="Auto" 
-                      VerticalScrollBarVisibility="Auto">
-            <Image Source="{Binding DisplayImage}" 
-                   Stretch="None"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"/>
-        </ScrollViewer>
-    </Border>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Image Display -->
+        <Border Grid.Row="0"
+                Background="#1E1E1E" 
+                BorderBrush="#3E3E3E" 
+                BorderThickness="1">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                          VerticalScrollBarVisibility="Auto">
+                <Image Source="{Binding DisplayImage}" 
+                       Stretch="None"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"/>
+            </ScrollViewer>
+        </Border>
+        
+        <!-- Bottom Toolbar -->
+        <Border Grid.Row="1"
+                Background="#2E2E2E"
+                BorderBrush="#3E3E3E"
+                BorderThickness="1,0,1,1"
+                Padding="5">
+            <StackPanel Orientation="Horizontal" 
+                        HorizontalAlignment="Right"
+                        Spacing="5">
+                <!-- Export Button -->
+                <Button Command="{Binding ExportImageCommand}"
+                        ToolTip.Tip="Export Image"
+                        Padding="8">
+                    <Button.IsEnabled>
+                        <Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+                    </Button.IsEnabled>
+                    <lucideAvalonia:Lucide Icon="Download" 
+                                           StrokeBrush="White" 
+                                           StrokeThickness="1.5" 
+                                           Width="20" 
+                                           Height="20"/>
+                </Button>
+                
+                <!-- Future: Zoom controls can be added here -->
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>
 
