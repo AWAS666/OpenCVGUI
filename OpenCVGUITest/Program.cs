@@ -55,8 +55,7 @@ Cv2.FindContours(mask, out Point[][] contours, out _, RetrievalModes.External, C
 
 foreach (var cnt in contours)
 {
-    var approx = Cv2.ApproxPolyDP(cnt, 0.02 * Cv2.ArcLength(cnt, true), true);
-    if (approx.Length > 1 && Cv2.ContourArea(cnt) > 100)
+    if (Cv2.ContourArea(cnt) > 100)
     {
         var rect = Cv2.BoundingRect(cnt);
         Cv2.Rectangle(overlaid, rect, new Scalar(0, 255, 0), 1);
