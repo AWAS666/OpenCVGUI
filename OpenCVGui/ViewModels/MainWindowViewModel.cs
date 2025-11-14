@@ -153,6 +153,54 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(PanY));
     }
 
+    public void SetSourceImage(Mat image)
+    {
+        _sourceImage?.Dispose();
+        _sourceImage = image?.Clone();
+        RenderChain();
+    }
+
+    public IFileDialogService GetFileDialogService() => _fileDialogService;
+
+    [RelayCommand]
+    private void OpenCustomControlWindow()
+    {
+        if (SelectedLayer == null || !SelectedLayer.HasCustomControl)
+            return;
+
+        // Check if window already exists
+        var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+        if (windows != null)
+        {
+            var existingWindow = windows.Windows.OfType<OpenCVGui.Views.CustomControlWindow>()
+                .FirstOrDefault(w => w.DataContext == SelectedLayer);
+            
+            if (existingWindow != null)
+            {
+                existingWindow.Activate();
+                return;
+            }
+
+            // Create new window
+            var window = new OpenCVGui.Views.CustomControlWindow
+            {
+                DataContext = SelectedLayer,
+                WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
+            };
+            
+            // Set owner to main window
+            var mainWindow = windows.MainWindow;
+            if (mainWindow != null)
+            {
+                window.Show(mainWindow);
+            }
+            else
+            {
+                window.Show();
+            }
+        }
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStreamingPlaying))]
     [NotifyPropertyChangedFor(nameof(PauseButtonIcon))]
@@ -243,6 +291,11 @@ public partial class MainWindowViewModel : ViewModelBase
         TargetCropParameter = null;
         CurrentCropData?.Dispose();
         CurrentCropData = null;
+    }
+
+    public void CancelCropPublic()
+    {
+        CancelCrop();
     }
 
     public void SetCropSelection(int x, int y, int width, int height)
@@ -359,7 +412,12 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnSelectedLayerChanged(LayerViewModel? value)
     {
         UpdateFileParameterVisibility();
-        RenderChain();
+        // Don't trigger streaming check just from selecting a layer
+        // Only render if not streaming
+        if (!IsStreamingActive)
+        {
+            RenderChain();
+        }
         RemoveLayerCommand.NotifyCanExecuteChanged();
         ResetLayerToDefaultsCommand.NotifyCanExecuteChanged();
     }
@@ -949,6 +1007,11 @@ public partial class MainWindowViewModel : ViewModelBase
                 });
             });
         }
+    }
+
+    public void RenderChainPublic()
+    {
+        RenderChain();
     }
 
     private void RenderChainInternal()

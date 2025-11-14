@@ -75,11 +75,28 @@ public static class LayerChainSerializer
                 var value = prop.GetValue(layer);
                 if (value != null)
                 {
-                    layerData.Parameters.Add(new ParameterData
+                    // Handle List<string> specially for base64 sample storage
+                    if (value is List<string> stringList)
                     {
-                        Name = prop.Name,
-                        Value = ConvertToString(value, prop.PropertyType, prop)
-                    });
+                        // Serialize list as comma-separated base64 strings
+                        var base64Strings = stringList.Where(s => !string.IsNullOrEmpty(s)).ToList();
+                        if (base64Strings.Count > 0)
+                        {
+                            layerData.Parameters.Add(new ParameterData
+                            {
+                                Name = prop.Name,
+                                Value = string.Join("|LIST_SEPARATOR|", base64Strings)
+                            });
+                        }
+                    }
+                    else
+                    {
+                        layerData.Parameters.Add(new ParameterData
+                        {
+                            Name = prop.Name,
+                            Value = ConvertToString(value, prop.PropertyType, prop)
+                        });
+                    }
                 }
             }
         }
@@ -116,10 +133,24 @@ public static class LayerChainSerializer
                 var paramData = layerData.Parameters.FirstOrDefault(p => p.Name == prop.Name);
                 if (paramData != null)
                 {
-                    var value = ConvertFromString(paramData.Value, prop.PropertyType, prop);
-                    if (value != null)
+                    // Handle List<string> specially for base64 sample storage
+                    if (prop.PropertyType == typeof(List<string>))
                     {
-                        prop.SetValue(layer, value);
+                        var list = new List<string>();
+                        if (!string.IsNullOrEmpty(paramData.Value))
+                        {
+                            var items = paramData.Value.Split(new[] { "|LIST_SEPARATOR|" }, StringSplitOptions.None);
+                            list.AddRange(items.Where(s => !string.IsNullOrEmpty(s)));
+                        }
+                        prop.SetValue(layer, list);
+                    }
+                    else
+                    {
+                        var value = ConvertFromString(paramData.Value, prop.PropertyType, prop);
+                        if (value != null)
+                        {
+                            prop.SetValue(layer, value);
+                        }
                     }
                 }
             }

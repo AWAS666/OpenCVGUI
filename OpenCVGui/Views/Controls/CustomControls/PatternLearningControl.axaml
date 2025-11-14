@@ -1,0 +1,551 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:OpenCVGui.ViewModels.Custom"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:lucideAvalonia="clr-namespace:LucideAvalonia;assembly=LucideAvalonia"
+			 xmlns:converters="using:Avalonia.Data.Converters"
+			 mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+			 x:Class="OpenCVGui.Views.Controls.CustomControls.PatternLearningControl"
+			 x:DataType="vm:PatternLearningControlViewModel">
+	<Grid>
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="*" MinWidth="400"/>
+			<ColumnDefinition Width="500"/>
+		</Grid.ColumnDefinitions>
+
+		<!-- Image Display Area (Left/Center) -->
+		<Grid Grid.Column="0" Margin="5">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="*"/>
+				<RowDefinition Height="Auto"/>
+			</Grid.RowDefinitions>
+
+			<Border Grid.Row="0"
+					Background="#1E1E1E" 
+					BorderBrush="#3E3E3E" 
+					BorderThickness="1"
+					x:Name="ImageContainer">
+				<Grid>
+					<ScrollViewer x:Name="ImageScrollViewer"
+								  HorizontalScrollBarVisibility="Auto" 
+								  VerticalScrollBarVisibility="Auto">
+						<Border x:Name="ImageBorder"
+								HorizontalAlignment="Center"
+								VerticalAlignment="Center">
+							<Image x:Name="DisplayImageControl"
+								   Source="{Binding DisplayImage}" 
+								   Stretch="None"
+								   RenderTransformOrigin="0.5,0.5">
+								<Image.RenderTransform>
+									<TransformGroup>
+										<ScaleTransform ScaleX="{Binding ZoomLevel}" 
+													   ScaleY="{Binding ZoomLevel}"/>
+										<TranslateTransform X="{Binding PanX}" 
+														   Y="{Binding PanY}"/>
+									</TransformGroup>
+								</Image.RenderTransform>
+							</Image>
+						</Border>
+					</ScrollViewer>
+					
+					<!-- Navigation Buttons Overlay -->
+					<Grid IsVisible="{Binding DisplayImage, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="Auto"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+						
+						<!-- Previous Button (Left) -->
+						<Button Grid.Column="0"
+								Command="{Binding NavigatePreviousCommand}"
+								IsEnabled="{Binding CanNavigatePrevious}"
+								VerticalAlignment="Center"
+								HorizontalAlignment="Left"
+								Margin="10,0,0,0"
+								Padding="12,8"
+								Opacity="0.8"
+								Background="#80000000"
+								BorderThickness="0">
+							<lucideAvalonia:Lucide Icon="ChevronLeft" 
+												   StrokeBrush="White" 
+												   StrokeThickness="2" 
+												   Width="24" 
+												   Height="24"/>
+						</Button>
+						
+						<!-- Next Button (Right) -->
+						<Button Grid.Column="2"
+								Command="{Binding NavigateNextCommand}"
+								IsEnabled="{Binding CanNavigateNext}"
+								VerticalAlignment="Center"
+								HorizontalAlignment="Right"
+								Margin="0,0,10,0"
+								Padding="12,8"
+								Opacity="0.8"
+								Background="#80000000"
+								BorderThickness="0">
+							<lucideAvalonia:Lucide Icon="ChevronRight" 
+												   StrokeBrush="White" 
+												   StrokeThickness="2" 
+												   Width="24" 
+												   Height="24"/>
+						</Button>
+						
+						<!-- Image Counter (Center Top) -->
+						<Border Grid.Column="1"
+								HorizontalAlignment="Center"
+								VerticalAlignment="Top"
+								Margin="0,10,0,0"
+								Padding="8,4"
+								Opacity="0.8"
+								Background="#80000000"
+								CornerRadius="4"
+								IsVisible="{Binding ImageNavigationInfo, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
+							<TextBlock Text="{Binding ImageNavigationInfo}"
+									   Foreground="White"
+									   FontSize="12"/>
+						</Border>
+					</Grid>
+					
+					<!-- Crop Selection Rectangle Overlay -->
+					<Canvas x:Name="CropOverlayCanvas"
+							IsVisible="{Binding IsCropMode}"
+							IsHitTestVisible="False">
+						<Rectangle x:Name="CropSelectionRectangle"
+								   Stroke="#00FF00"
+								   StrokeThickness="2"
+								   StrokeDashArray="4,4"
+								   Fill="#4000FF00"
+								   IsVisible="False"/>
+					</Canvas>
+				</Grid>
+			</Border>
+			
+			<!-- Bottom Toolbar -->
+			<Border Grid.Row="1"
+					Background="#2E2E2E"
+					BorderBrush="#3E3E3E"
+					BorderThickness="1,0,1,1"
+					Padding="5">
+				<Grid>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="*"/>
+						<ColumnDefinition Width="Auto"/>
+					</Grid.ColumnDefinitions>
+					
+					<!-- Status Area (Left) -->
+					<StackPanel Grid.Column="0"
+								Orientation="Horizontal" 
+								Spacing="8"
+								VerticalAlignment="Center">
+						<TextBlock Text="Pattern Learning"
+								   FontSize="10"
+								   Foreground="#888888"
+								   VerticalAlignment="Center"/>
+					</StackPanel>
+					
+					<!-- Toolbar Buttons (Right) -->
+					<StackPanel Grid.Column="1"
+								Orientation="Horizontal" 
+								Spacing="5">
+						<!-- Save as Positive -->
+						<Button Command="{Binding SaveCropAsPositiveCommand}"
+								ToolTip.Tip="Save as Positive Sample"
+								Padding="8"
+								IsVisible="{Binding IsCropMode}"
+								IsEnabled="{Binding CanSaveCropAsPositive}">
+							<lucideAvalonia:Lucide Icon="ThumbsUp" 
+												   StrokeBrush="#00FF00" 
+												   StrokeThickness="2" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Save as Negative -->
+						<Button Command="{Binding SaveCropAsNegativeCommand}"
+								ToolTip.Tip="Save as Negative Sample"
+								Padding="8"
+								IsVisible="{Binding IsCropMode}"
+								IsEnabled="{Binding CanSaveCropAsNegative}">
+							<lucideAvalonia:Lucide Icon="ThumbsDown" 
+												   StrokeBrush="#FF4444" 
+												   StrokeThickness="2" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Save as Test -->
+						<Button Command="{Binding SaveCropAsTestCommand}"
+								ToolTip.Tip="Save as Test Sample"
+								Padding="8"
+								IsVisible="{Binding IsCropMode}"
+								IsEnabled="{Binding CanSaveCropAsTest}">
+							<lucideAvalonia:Lucide Icon="FileQuestion" 
+												   StrokeBrush="#FFAA00" 
+												   StrokeThickness="2" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Crop Cancel Button -->
+						<Button Command="{Binding CancelCropCommand}"
+								ToolTip.Tip="Cancel Crop"
+								Padding="8"
+								IsVisible="{Binding IsCropMode}">
+							<lucideAvalonia:Lucide Icon="X" 
+												   StrokeBrush="#FF0000" 
+												   StrokeThickness="2" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Import Button -->
+						<Button Command="{Binding ImportImageCommand}"
+								ToolTip.Tip="Import Image"
+								Padding="8">
+							<lucideAvalonia:Lucide Icon="Upload" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Rotate Left Button -->
+						<Button Command="{Binding RotateLeftCommand}"
+								ToolTip.Tip="Rotate Left (5°)"
+								Padding="8">
+							<Button.IsEnabled>
+								<Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+							</Button.IsEnabled>
+							<lucideAvalonia:Lucide Icon="RotateCcw" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Rotate Right Button -->
+						<Button Command="{Binding RotateRightCommand}"
+								ToolTip.Tip="Rotate Right (5°)"
+								Padding="8">
+							<Button.IsEnabled>
+								<Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+							</Button.IsEnabled>
+							<lucideAvalonia:Lucide Icon="RotateCw" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Start Crop Button -->
+						<Button Command="{Binding StartCropModeCommand}"
+								ToolTip.Tip="Start Crop Mode"
+								Padding="8">
+							<Button.IsEnabled>
+								<Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+							</Button.IsEnabled>
+							<lucideAvalonia:Lucide Icon="Crop" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Zoom Out Button -->
+						<Button Command="{Binding ZoomOutCommand}"
+								ToolTip.Tip="Zoom Out"
+								Padding="8">
+							<Button.IsEnabled>
+								<Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+							</Button.IsEnabled>
+							<lucideAvalonia:Lucide Icon="ZoomOut" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Fit to View Button -->
+						<Button Command="{Binding FitToViewCommand}"
+								ToolTip.Tip="Fit to View"
+								Padding="8">
+							<Button.IsEnabled>
+								<Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+							</Button.IsEnabled>
+							<lucideAvalonia:Lucide Icon="Maximize2" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+						
+						<!-- Zoom In Button -->
+						<Button Command="{Binding ZoomInCommand}"
+								ToolTip.Tip="Zoom In"
+								Padding="8">
+							<Button.IsEnabled>
+								<Binding Path="DisplayImage" Converter="{x:Static converters:ObjectConverters.IsNotNull}"/>
+							</Button.IsEnabled>
+							<lucideAvalonia:Lucide Icon="ZoomIn" 
+												   StrokeBrush="White" 
+												   StrokeThickness="1.5" 
+												   Width="20" 
+												   Height="20"/>
+						</Button>
+					</StackPanel>
+				</Grid>
+			</Border>
+		</Grid>
+
+		<!-- Sidebar (Right) -->
+		<Grid Grid.Column="1" Margin="5">
+			<ScrollViewer VerticalScrollBarVisibility="Auto">
+				<StackPanel Spacing="10">
+					<!-- Header -->
+					<TextBlock Text="Pattern Learning" 
+							   FontSize="16" 
+							   FontWeight="Bold" 
+							   Margin="0,0,0,10"/>
+
+					<!-- Positive Samples Section -->
+					<Border BorderBrush="#3E3E3E" 
+							BorderThickness="1" 
+							CornerRadius="4" 
+							Padding="10">
+						<StackPanel Spacing="10">
+							<TextBlock Text="Positive Samples" 
+									   FontWeight="SemiBold" 
+									   FontSize="14"/>
+							<TextBlock Text="{Binding PositiveSampleCount, StringFormat='Count: {0}'}" 
+									   FontSize="11" 
+									   Foreground="Gray"/>
+							<ScrollViewer MaxHeight="200" 
+										  VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding PositiveSampleThumbnails}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<WrapPanel Orientation="Horizontal"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Border BorderBrush="#3E3E3E" 
+													BorderThickness="1" 
+													Margin="2"
+													Width="100" 
+													Height="100">
+												<Image Source="{Binding}" 
+													   Stretch="Uniform"/>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</StackPanel>
+					</Border>
+
+					<!-- Negative Samples Section -->
+					<Border BorderBrush="#3E3E3E" 
+							BorderThickness="1" 
+							CornerRadius="4" 
+							Padding="10">
+						<StackPanel Spacing="10">
+							<TextBlock Text="Negative Samples" 
+									   FontWeight="SemiBold" 
+									   FontSize="14"/>
+							<TextBlock Text="{Binding NegativeSampleCount, StringFormat='Count: {0}'}" 
+									   FontSize="11" 
+									   Foreground="Gray"/>
+							<ScrollViewer MaxHeight="200" 
+										  VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding NegativeSampleThumbnails}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<WrapPanel Orientation="Horizontal"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Border BorderBrush="#3E3E3E" 
+													BorderThickness="1" 
+													Margin="2"
+													Width="100" 
+													Height="100">
+												<Image Source="{Binding}" 
+													   Stretch="Uniform"/>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</StackPanel>
+					</Border>
+
+					<!-- Test Samples Section -->
+					<Border BorderBrush="#3E3E3E" 
+							BorderThickness="1" 
+							CornerRadius="4" 
+							Padding="10">
+						<StackPanel Spacing="10">
+							<TextBlock Text="Test Samples" 
+									   FontWeight="SemiBold" 
+									   FontSize="14"/>
+							<TextBlock Text="{Binding TestSampleCount, StringFormat='Count: {0}'}" 
+									   FontSize="11" 
+									   Foreground="Gray"/>
+							<ScrollViewer MaxHeight="200" 
+										  VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding TestSampleThumbnails}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<WrapPanel Orientation="Horizontal"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<Border BorderBrush="#3E3E3E" 
+													BorderThickness="1" 
+													Margin="2"
+													Width="100" 
+													Height="100">
+												<Image Source="{Binding}" 
+													   Stretch="Uniform"/>
+											</Border>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</StackPanel>
+					</Border>
+
+					<!-- Sample Paths Section -->
+					<Border BorderBrush="#3E3E3E" 
+							BorderThickness="1" 
+							CornerRadius="4" 
+							Padding="10">
+						<StackPanel Spacing="10">
+							<TextBlock Text="Sample Directories" 
+									   FontWeight="SemiBold" 
+									   FontSize="14"/>
+							
+							<!-- Positive Samples Path -->
+							<StackPanel Spacing="5">
+								<TextBlock Text="Positive Samples Path:" 
+										   FontSize="12"/>
+								<Grid ColumnDefinitions="*,Auto">
+									<TextBlock Grid.Column="0" 
+											   Text="{Binding PositiveSamplesPath}" 
+											   TextTrimming="CharacterEllipsis"
+											   VerticalAlignment="Center"
+											   Margin="0,0,5,0"/>
+									<Button Grid.Column="1" 
+											Command="{Binding BrowsePositiveSamplesPathCommand}"
+											Padding="8,4">
+										<lucideAvalonia:Lucide Icon="Folder" 
+															   StrokeBrush="White" 
+															   StrokeThickness="1.5" 
+															   Width="16" 
+															   Height="16"/>
+									</Button>
+								</Grid>
+								<TextBlock Text="{Binding PositiveSampleCount, StringFormat='Samples: {0}'}" 
+										   FontSize="10" 
+										   Foreground="Gray"/>
+							</StackPanel>
+
+							<!-- Negative Samples Path -->
+							<StackPanel Spacing="5">
+								<TextBlock Text="Negative Samples Path:" 
+										   FontSize="12"/>
+								<Grid ColumnDefinitions="*,Auto">
+									<TextBlock Grid.Column="0" 
+											   Text="{Binding NegativeSamplesPath}" 
+											   TextTrimming="CharacterEllipsis"
+											   VerticalAlignment="Center"
+											   Margin="0,0,5,0"/>
+									<Button Grid.Column="1" 
+											Command="{Binding BrowseNegativeSamplesPathCommand}"
+											Padding="8,4">
+										<lucideAvalonia:Lucide Icon="Folder" 
+															   StrokeBrush="White" 
+															   StrokeThickness="1.5" 
+															   Width="16" 
+															   Height="16"/>
+									</Button>
+								</Grid>
+								<TextBlock Text="{Binding NegativeSampleCount, StringFormat='Samples: {0}'}" 
+										   FontSize="10" 
+										   Foreground="Gray"/>
+							</StackPanel>
+
+							<!-- Test Samples Path -->
+							<StackPanel Spacing="5">
+								<TextBlock Text="Test Samples Path:" 
+										   FontSize="12"/>
+								<Grid ColumnDefinitions="*,Auto">
+									<TextBlock Grid.Column="0" 
+											   Text="{Binding TestSamplesPath}" 
+											   TextTrimming="CharacterEllipsis"
+											   VerticalAlignment="Center"
+											   Margin="0,0,5,0"/>
+									<Button Grid.Column="1" 
+											Command="{Binding BrowseTestSamplesPathCommand}"
+											Padding="8,4">
+										<lucideAvalonia:Lucide Icon="Folder" 
+															   StrokeBrush="White" 
+															   StrokeThickness="1.5" 
+															   Width="16" 
+															   Height="16"/>
+									</Button>
+								</Grid>
+								<TextBlock Text="{Binding TestSampleCount, StringFormat='Samples: {0}'}" 
+										   FontSize="10" 
+										   Foreground="Gray"/>
+							</StackPanel>
+						</StackPanel>
+					</Border>
+
+					<!-- Training Section -->
+					<Border BorderBrush="#3E3E3E" 
+							BorderThickness="1" 
+							CornerRadius="4" 
+							Padding="10">
+						<StackPanel Spacing="10">
+							<TextBlock Text="Training" 
+									   FontWeight="SemiBold" 
+									   FontSize="14"/>
+							
+							<Button Command="{Binding TrainModelCommand}" 
+									IsEnabled="{Binding CanTrain}"
+									HorizontalAlignment="Stretch"
+									HorizontalContentAlignment="Center"
+									Padding="10,5">
+								<StackPanel Orientation="Horizontal" Spacing="10">
+									<lucideAvalonia:Lucide Icon="Play" 
+														   StrokeBrush="White" 
+														   StrokeThickness="1.5" 
+														   Width="18" 
+														   Height="18"/>
+									<TextBlock VerticalAlignment="Center">Train Model</TextBlock>
+								</StackPanel>
+							</Button>
+
+							<TextBlock Text="{Binding TrainingStatus}" 
+									   FontSize="11" 
+									   Foreground="Gray" 
+									   TextWrapping="Wrap"
+									   MinHeight="40"/>
+
+							<ProgressBar IsIndeterminate="{Binding IsTraining}" 
+										 IsVisible="{Binding IsTraining}"
+										 Height="4"/>
+						</StackPanel>
+					</Border>
+				</StackPanel>
+			</ScrollViewer>
+		</Grid>
+	</Grid>
+</UserControl>

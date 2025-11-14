@@ -96,3 +96,20 @@ public class ParameterImageSampleAttribute : Attribute
 {
 }
 
+/// <summary>
+/// Marks a layer class as requiring a custom control for its parameter editor
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public class CustomControlAttribute : Attribute
+{
+    /// <summary>
+    /// Name of the custom control type (e.g., "PatternLearningControl")
+    /// </summary>
+    public string ControlTypeName { get; }
+
+    public CustomControlAttribute(string controlTypeName)
+    {
+        ControlTypeName = controlTypeName ?? throw new ArgumentNullException(nameof(controlTypeName));
+    }
+}
+

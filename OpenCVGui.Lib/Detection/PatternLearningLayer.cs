@@ -8,6 +8,7 @@ namespace OpenCVGui.Lib.Detection;
 /// <summary>
 /// Layer that learns patterns from examples using machine learning (SVM or KNN) and detects them in images
 /// </summary>
+[CustomControl("PatternLearningControl")]
 public class PatternLearningLayer : BaseLayer
 {
     [Parameter(DisplayName = "Learning Mode", Description = "Current mode: Training or Detection", Order = 0)]
@@ -26,37 +27,58 @@ public class PatternLearningLayer : BaseLayer
     [Parameter(DisplayName = "Negative Samples Path", Description = "Path to directory containing negative training samples (non-pattern images)", Order = 4)]
     public string NegativeSamplesPath { get; set; } = string.Empty;
 
-    [Parameter(DisplayName = "Window Width", Description = "Width of sliding window for detection (pixels)", Order = 5)]
+    [Parameter(DisplayName = "Test Samples Path", Description = "Path to directory containing test/unseen data samples", Order = 5)]
+    public string TestSamplesPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Positive sample images stored as base64-encoded PNG strings (for portable XML serialization)
+    /// </summary>
+    [Parameter(DisplayName = "Positive Samples (Base64)", Description = "Base64-encoded positive training samples", Order = 15)]
+    public List<string> PositiveSamplesBase64 { get; set; } = new();
+
+    /// <summary>
+    /// Negative sample images stored as base64-encoded PNG strings (for portable XML serialization)
+    /// </summary>
+    [Parameter(DisplayName = "Negative Samples (Base64)", Description = "Base64-encoded negative training samples", Order = 16)]
+    public List<string> NegativeSamplesBase64 { get; set; } = new();
+
+    /// <summary>
+    /// Test sample images stored as base64-encoded PNG strings (for portable XML serialization)
+    /// </summary>
+    [Parameter(DisplayName = "Test Samples (Base64)", Description = "Base64-encoded test samples", Order = 17)]
+    public List<string> TestSamplesBase64 { get; set; } = new();
+
+    [Parameter(DisplayName = "Window Width", Description = "Width of sliding window for detection (pixels)", Order = 6)]
     [ParameterRange(16, 512, 8)]
     public int WindowWidth { get; set; } = 64;
 
-    [Parameter(DisplayName = "Window Height", Description = "Height of sliding window for detection (pixels)", Order = 6)]
+    [Parameter(DisplayName = "Window Height", Description = "Height of sliding window for detection (pixels)", Order = 7)]
     [ParameterRange(16, 512, 8)]
     public int WindowHeight { get; set; } = 64;
 
-    [Parameter(DisplayName = "Step Size", Description = "Step size for sliding window (pixels)", Order = 7)]
+    [Parameter(DisplayName = "Step Size", Description = "Step size for sliding window (pixels)", Order = 8)]
     [ParameterRange(1, 64, 1)]
     public int StepSize { get; set; } = 8;
 
-    [Parameter(DisplayName = "Detection Threshold", Description = "Minimum confidence score for detection (0.0-1.0)", Order = 8)]
+    [Parameter(DisplayName = "Detection Threshold", Description = "Minimum confidence score for detection (0.0-1.0)", Order = 9)]
     [ParameterRange(0.0, 1.0, 0.01)]
     public double DetectionThreshold { get; set; } = 0.5;
 
-    [Parameter(DisplayName = "Non-Maximum Suppression", Description = "Remove overlapping detections", Order = 9)]
+    [Parameter(DisplayName = "Non-Maximum Suppression", Description = "Remove overlapping detections", Order = 10)]
     public bool UseNonMaxSuppression { get; set; } = true;
 
-    [Parameter(DisplayName = "Overlap Threshold", Description = "Maximum overlap ratio for non-maximum suppression (0.0-1.0)", Order = 10)]
+    [Parameter(DisplayName = "Overlap Threshold", Description = "Maximum overlap ratio for non-maximum suppression (0.0-1.0)", Order = 11)]
     [ParameterRange(0.0, 1.0, 0.01)]
     public double OverlapThreshold { get; set; } = 0.3;
 
-    [Parameter(DisplayName = "Draw Detections", Description = "Draw bounding boxes around detected patterns", Order = 11)]
+    [Parameter(DisplayName = "Draw Detections", Description = "Draw bounding boxes around detected patterns", Order = 12)]
     public bool DrawDetections { get; set; } = true;
 
-    [Parameter(DisplayName = "Detection Color", Description = "Color of detection bounding boxes in hex format", Order = 12)]
+    [Parameter(DisplayName = "Detection Color", Description = "Color of detection bounding boxes in hex format", Order = 13)]
     [ParameterColor]
     public string DetectionColorHex { get; set; } = "#00FF00";
 
-    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of bounding box lines (-1 = filled)", Order = 13)]
+    [Parameter(DisplayName = "Line Thickness", Description = "Thickness of bounding box lines (-1 = filled)", Order = 14)]
     [ParameterRange(-1, 10, 1)]
     public int LineThickness { get; set; } = 2;
 
@@ -197,16 +219,16 @@ public class PatternLearningLayer : BaseLayer
     {
         TrainingStatus = "Loading training samples...";
 
-        // Load positive samples
-        List<Mat> positiveSamples = LoadSamples(PositiveSamplesPath);
+        // Load positive samples (from base64 or directory)
+        List<Mat> positiveSamples = LoadSamples(PositiveSamplesPath, PositiveSamplesBase64);
         if (positiveSamples.Count == 0)
         {
             TrainingStatus = "Error: No positive samples found";
             return;
         }
 
-        // Load negative samples
-        List<Mat> negativeSamples = LoadSamples(NegativeSamplesPath);
+        // Load negative samples (from base64 or directory)
+        List<Mat> negativeSamples = LoadSamples(NegativeSamplesPath, NegativeSamplesBase64);
         if (negativeSamples.Count == 0)
         {
             TrainingStatus = "Error: No negative samples found";
@@ -302,34 +324,63 @@ public class PatternLearningLayer : BaseLayer
         TrainingStatus = $"Training complete! Model trained on {allFeatures.Count} samples.";
     }
 
-    private List<Mat> LoadSamples(string directoryPath)
+    private List<Mat> LoadSamples(string directoryPath, List<string> base64List)
     {
         List<Mat> samples = new List<Mat>();
 
-        if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
+        // First, try loading from base64 lists (primary storage for portability)
+        if (base64List != null && base64List.Count > 0)
         {
-            return samples;
+            foreach (var base64String in base64List)
+            {
+                try
+                {
+                    byte[] imageBytes = Convert.FromBase64String(base64String);
+                    Mat image = Cv2.ImDecode(imageBytes, ImreadModes.Grayscale);
+                    if (!image.Empty())
+                    {
+                        // Resize to window size if needed
+                        Size windowSize = new Size(WindowWidth, WindowHeight);
+                        if (image.Width != windowSize.Width || image.Height != windowSize.Height)
+                        {
+                            Mat resized = new Mat();
+                            Cv2.Resize(image, resized, windowSize);
+                            image.Dispose();
+                            image = resized;
+                        }
+                        samples.Add(image);
+                    }
+                }
+                catch
+                {
+                    // Skip invalid base64 strings
+                }
+            }
         }
 
-        string[] imageExtensions = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif", "*.gif" };
-        foreach (var extension in imageExtensions)
+        // Fall back to directory loading for backward compatibility
+        if (samples.Count == 0 && !string.IsNullOrEmpty(directoryPath) && Directory.Exists(directoryPath))
         {
-            string[] files = Directory.GetFiles(directoryPath, extension, SearchOption.TopDirectoryOnly);
-            foreach (var file in files)
+            string[] imageExtensions = { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff", "*.tif", "*.gif" };
+            foreach (var extension in imageExtensions)
             {
-                Mat image = Cv2.ImRead(file, ImreadModes.Grayscale);
-                if (!image.Empty())
+                string[] files = Directory.GetFiles(directoryPath, extension, SearchOption.TopDirectoryOnly);
+                foreach (var file in files)
                 {
-                    // Resize to window size if needed
-                    Size windowSize = new Size(WindowWidth, WindowHeight);
-                    if (image.Width != windowSize.Width || image.Height != windowSize.Height)
+                    Mat image = Cv2.ImRead(file, ImreadModes.Grayscale);
+                    if (!image.Empty())
                     {
-                        Mat resized = new Mat();
-                        Cv2.Resize(image, resized, windowSize);
-                        image.Dispose();
-                        image = resized;
+                        // Resize to window size if needed
+                        Size windowSize = new Size(WindowWidth, WindowHeight);
+                        if (image.Width != windowSize.Width || image.Height != windowSize.Height)
+                        {
+                            Mat resized = new Mat();
+                            Cv2.Resize(image, resized, windowSize);
+                            image.Dispose();
+                            image = resized;
+                        }
+                        samples.Add(image);
                     }
-                    samples.Add(image);
                 }
             }
         }

@@ -1,7 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using OpenCVGui.Lib;
 using OpenCVGui.Lib.Attributes;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
@@ -56,6 +58,64 @@ public partial class LayerViewModel : ViewModelBase
 
     public ObservableCollection<ParameterProperty> Parameters { get; } = new();
 
+    /// <summary>
+    /// Filtered parameters for display when custom control exists (excludes sample paths and model path)
+    /// </summary>
+    public ObservableCollection<ParameterProperty> FilteredParameters { get; } = new();
+
+    private void UpdateFilteredParameters()
+    {
+        FilteredParameters.Clear();
+        
+        if (!HasCustomControl)
+        {
+            foreach (var param in Parameters)
+            {
+                FilteredParameters.Add(param);
+            }
+        }
+        else
+        {
+            // When custom control exists, filter out sample paths, base64 lists, and model path
+            // These are managed by the custom control
+            var excludedNames = new[] { "PositiveSamplesPath", "NegativeSamplesPath", "TestSamplesPath", "ModelPath", 
+                "PositiveSamplesBase64", "NegativeSamplesBase64", "TestSamplesBase64" };
+            foreach (var param in Parameters.Where(p => !excludedNames.Contains(p.PropertyName)))
+            {
+                FilteredParameters.Add(param);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether this layer has a custom control
+    /// </summary>
+    public bool HasCustomControl
+    {
+        get
+        {
+            var attr = _layer.GetType().GetCustomAttribute<CustomControlAttribute>();
+            return attr != null;
+        }
+    }
+
+    /// <summary>
+    /// Name of the custom control type for this layer
+    /// </summary>
+    public string? CustomControlTypeName
+    {
+        get
+        {
+            var attr = _layer.GetType().GetCustomAttribute<CustomControlAttribute>();
+            return attr?.ControlTypeName;
+        }
+    }
+
+    /// <summary>
+    /// Whether to show standard parameter editor (inverse of HasCustomControl)
+    /// </summary>
+    public bool ShowStandardEditor => !HasCustomControl;
+
     public LayerViewModel(BaseLayer layer)
     {
         _layer = layer ?? throw new ArgumentNullException(nameof(layer));
@@ -94,12 +154,34 @@ public partial class LayerViewModel : ViewModelBase
                 }
             };
         }
+
+        // Update filtered parameters after discovering all parameters
+        UpdateFilteredParameters();
+        
+        // Subscribe to Parameters collection changes to update filtered parameters
+        Parameters.CollectionChanged += (s, e) =>
+        {
+            UpdateFilteredParameters();
+        };
     }
 
     public void RefreshRuntime()
     {
         OnPropertyChanged(nameof(LastRuntime));
         OnPropertyChanged(nameof(HasError));
+    }
+
+    [RelayCommand]
+    private void CloseCustomControlWindow()
+    {
+        // Find and close the custom control window if it exists
+        var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+        if (windows != null)
+        {
+            var customWindow = windows.Windows.OfType<OpenCVGui.Views.CustomControlWindow>()
+                .FirstOrDefault(w => w.DataContext == this);
+            customWindow?.Close();
+        }
     }
 }
 

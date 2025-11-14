@@ -10,60 +10,93 @@
 			 x:Class="OpenCVGui.Views.Controls.ParameterEditorControl"
 			 x:DataType="vm:MainWindowViewModel">
 	<StackPanel>
-		<!-- Reset to Defaults Button -->
-		<Button Command="{Binding ResetLayerToDefaultsCommand}"
-				HorizontalAlignment="Stretch"
-				HorizontalContentAlignment="Center"
-				Padding="10,5"
+		<!-- Custom Control Header with Pop-Out Button (shown if layer has custom control) -->
+		<Border IsVisible="{Binding SelectedLayer.HasCustomControl}"
+				BorderBrush="#3E3E3E"
+				BorderThickness="0,0,0,1"
+				Padding="5,5,5,10"
 				Margin="0,0,0,10">
-			<StackPanel Orientation="Horizontal" Spacing="10">
-				<lucideAvalonia:Lucide Icon="RotateCcw" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
-				<TextBlock VerticalAlignment="Center">Reset to Defaults</TextBlock>
-			</StackPanel>
-		</Button>
+			<Grid ColumnDefinitions="*,Auto">
+				<TextBlock Grid.Column="0" 
+						   Text="Custom Control" 
+						   FontWeight="SemiBold" 
+						   FontSize="12"
+						   VerticalAlignment="Center"/>
+				<Button Grid.Column="1" 
+						Command="{Binding OpenCustomControlWindowCommand}"
+						Padding="5,2"
+						Background="Transparent"
+						BorderThickness="0"
+						ToolTip.Tip="Pop out custom control">
+					<StackPanel Orientation="Horizontal" Spacing="5">
+						<lucideAvalonia:Lucide Icon="ExternalLink" 
+											   StrokeBrush="White" 
+											   StrokeThickness="1.5" 
+											   Width="14" 
+											   Height="14"/>
+						<TextBlock Text="Pop Out" FontSize="10"/>
+					</StackPanel>
+				</Button>
+			</Grid>
+		</Border>
 
-		<!-- Load Image Button (shown only if layer has file parameter) -->
-		<Button                 Command="{Binding LoadImageCommand}"
-								HorizontalAlignment="Stretch"
-								HorizontalContentAlignment="Center"
-								Padding="10,5"
-								Margin="0,0,0,10"
-								IsVisible="{Binding HasFileParameter}">
-			<StackPanel Orientation="Horizontal" Spacing="10">
-				<lucideAvalonia:Lucide Icon="Folder" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
-				<TextBlock VerticalAlignment="Center">Load Image</TextBlock>
-			</StackPanel>
-		</Button>
+		<!-- Standard Parameter Editor (always shown, but parameters filtered when custom control exists) -->
+		<StackPanel>
+			<!-- Reset to Defaults Button -->
+			<Button Command="{Binding ResetLayerToDefaultsCommand}"
+					HorizontalAlignment="Stretch"
+					HorizontalContentAlignment="Center"
+					Padding="10,5"
+					Margin="0,0,0,10">
+				<StackPanel Orientation="Horizontal" Spacing="10">
+					<lucideAvalonia:Lucide Icon="RotateCcw" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
+					<TextBlock VerticalAlignment="Center">Reset to Defaults</TextBlock>
+				</StackPanel>
+			</Button>
 
-		<ScrollViewer MaxHeight="400"
-					  VerticalScrollBarVisibility="Auto">
-			<ItemsControl ItemsSource="{Binding SelectedLayer.Parameters}">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<StackPanel Margin="0,5">
-							<TextBlock Text="{Binding DisplayName}"
-									   FontWeight="SemiBold"
-									   Margin="0,0,0,2"/>
-							<TextBlock Text="{Binding Description}"
-									   FontSize="10"
-									   Foreground="Gray"
-									   Margin="0,0,0,5"
-									   TextWrapping="Wrap"/>
+			<!-- Load Image Button (shown only if layer has file parameter) -->
+			<Button                 Command="{Binding LoadImageCommand}"
+									HorizontalAlignment="Stretch"
+									HorizontalContentAlignment="Center"
+									Padding="10,5"
+									Margin="0,0,0,10"
+									IsVisible="{Binding HasFileParameter}">
+				<StackPanel Orientation="Horizontal" Spacing="10">
+					<lucideAvalonia:Lucide Icon="Folder" StrokeBrush="white" StrokeThickness="1.5" Width="18" Height="18"/>
+					<TextBlock VerticalAlignment="Center">Load Image</TextBlock>
+				</StackPanel>
+			</Button>
 
-							<ContentControl Content="{Binding}">
-								<ContentControl.ContentTemplate>
-									<local:ParameterEditorTemplateSelector/>
-								</ContentControl.ContentTemplate>
-							</ContentControl>
-							<Border Height="1"
-									Background="#E0E0E0"
-									Margin="0,10,0,0">								
-							</Border>
-						</StackPanel>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-		</ScrollViewer>
+			<ScrollViewer MaxHeight="400"
+						  VerticalScrollBarVisibility="Auto">
+				<ItemsControl ItemsSource="{Binding SelectedLayer.FilteredParameters}">
+					<ItemsControl.ItemTemplate>
+						<DataTemplate>
+							<StackPanel Margin="0,5">
+								<TextBlock Text="{Binding DisplayName}"
+										   FontWeight="SemiBold"
+										   Margin="0,0,0,2"/>
+								<TextBlock Text="{Binding Description}"
+										   FontSize="10"
+										   Foreground="Gray"
+										   Margin="0,0,0,5"
+										   TextWrapping="Wrap"/>
+
+								<ContentControl Content="{Binding}">
+									<ContentControl.ContentTemplate>
+										<local:ParameterEditorTemplateSelector/>
+									</ContentControl.ContentTemplate>
+								</ContentControl>
+								<Border Height="1"
+										Background="#E0E0E0"
+										Margin="0,10,0,0">								
+								</Border>
+							</StackPanel>
+						</DataTemplate>
+					</ItemsControl.ItemTemplate>
+				</ItemsControl>
+			</ScrollViewer>
+		</StackPanel>
 	</StackPanel>
 </UserControl>
 
