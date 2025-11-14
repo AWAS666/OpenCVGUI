@@ -238,6 +238,7 @@ public class BinaryThresholdLayer : BaseLayer
 
                                 // Draw rotated rectangle
                                 Cv2.DrawContours(result, new[] { intBox }, -1, rectColor, LineThickness);
+                                Cv2.PutText(result, $"{rect.Size.Width}", new OpenCvSharp.Point(rect.Center.X, 75), HersheyFonts.HersheySimplex, 1, rectColor);
 
                                 // Store first valid rectangle for return value
                                 if (firstRect == null)
