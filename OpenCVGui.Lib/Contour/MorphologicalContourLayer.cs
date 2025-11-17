@@ -85,18 +85,9 @@ public class MorphologicalContourLayer : BaseLayer
         // Find contours
         Cv2.FindContours(mask, out Point[][] contours, out _, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
-        // Prepare output - convert to BGR if needed for colored rectangles
-        Mat result;
-        if (input.Channels() == 3)
-        {
-            result = input.Clone();
-        }
-        else
-        {
-            // Convert grayscale to BGR for colored rectangles
-            result = new Mat();
-            Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
-        }
+        // Prepare output for drawing
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = PrepareDrawTarget(drawTarget);
 
         // Draw rectangles for contours that meet area criteria
         var (b, g, r) = ColorUtils.HexToBgr(RectangleColorHex);

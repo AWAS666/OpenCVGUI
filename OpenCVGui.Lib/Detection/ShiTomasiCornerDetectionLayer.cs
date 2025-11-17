@@ -121,15 +121,8 @@ public class ShiTomasiCornerDetectionLayer : BaseLayer
         Mat result;
         if (DrawCorners && corners != null && corners.Length > 0)
         {
-            if (input.Channels() == 3)
-            {
-                result = input.Clone();
-            }
-            else
-            {
-                result = new Mat();
-                Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
-            }
+            Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+            result = PrepareDrawTarget(drawTarget);
 
             // Draw corners
             var (b, g, r) = ColorUtils.HexToBgr(CornerColorHex);

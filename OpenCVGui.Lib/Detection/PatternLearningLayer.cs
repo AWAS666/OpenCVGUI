@@ -111,7 +111,7 @@ public class PatternLearningLayer : BaseLayer
         }
         else
         {
-            return HandleDetection(input);
+            return HandleDetection(input, renderMode, chainInput);
         }
     }
 
@@ -121,7 +121,7 @@ public class PatternLearningLayer : BaseLayer
         return input.Clone();
     }
 
-    private Mat HandleDetection(Mat input)
+    private Mat HandleDetection(Mat input, RenderMode renderMode, Mat? chainInput)
     {
         // Load model if not loaded
         if (!_isModelLoaded && !string.IsNullOrEmpty(ModelPath) && File.Exists(ModelPath))
@@ -198,7 +198,8 @@ public class PatternLearningLayer : BaseLayer
         DetectionCount = detections.Count;
 
         // Draw detections
-        Mat result = input.Clone();
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = drawTarget != null && !drawTarget.Empty() ? drawTarget.Clone() : input.Clone();
         if (DrawDetections)
         {
             var (b, g, r) = ColorUtils.HexToBgr(DetectionColorHex);

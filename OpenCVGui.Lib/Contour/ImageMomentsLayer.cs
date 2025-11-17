@@ -101,15 +101,8 @@ public class ImageMomentsLayer : BaseLayer
         Mat result;
         if (DrawCentroid && Area > 0)
         {
-            if (input.Channels() == 3)
-            {
-                result = input.Clone();
-            }
-            else
-            {
-                result = new Mat();
-                Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
-            }
+            Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+            result = PrepareDrawTarget(drawTarget);
 
             // Draw centroid
             var (b, g, r) = ColorUtils.HexToBgr(CentroidColorHex);

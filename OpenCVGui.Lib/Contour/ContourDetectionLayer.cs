@@ -67,40 +67,28 @@ public class ContourDetectionLayer : BaseLayer
         Cv2.FindContours(binary, out Point[][] contours, out HierarchyIndex[] hierarchy, RetrievalMode, ApproximationMode);
 
         // Prepare output for drawing
-        // In UI mode: draw on chainInput (original user input) if available, otherwise input
-        // In Chain mode: draw on input (chain output)
-        Mat? drawTarget = null;
-        if (renderMode == RenderMode.UI && chainInput != null && !chainInput.Empty())
-        {
-            drawTarget = chainInput;
-        }
-        else
-        {
-            drawTarget = input;
-        }
-
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
         Mat result;
         if (DrawOnOriginal)
         {
-            if (drawTarget!.Channels() == 3)
+            result = PrepareDrawTarget(drawTarget);
+        }
+        else
+        {
+            if (drawTarget != null && !drawTarget.Empty())
             {
-                result = drawTarget.Clone();
+                if (drawTarget.Channels() == 3)
+                {
+                    result = new Mat(drawTarget.Size(), drawTarget.Type(), Scalar.All(0));
+                }
+                else
+                {
+                    result = new Mat(drawTarget.Size(), MatType.CV_8UC3, Scalar.All(0));
+                }
             }
             else
             {
                 result = new Mat();
-                Cv2.CvtColor(drawTarget, result, ColorConversionCodes.GRAY2BGR);
-            }
-        }
-        else
-        {
-            if (drawTarget!.Channels() == 3)
-            {
-                result = new Mat(drawTarget.Size(), drawTarget.Type(), Scalar.All(0));
-            }
-            else
-            {
-                result = new Mat(drawTarget.Size(), MatType.CV_8UC3, Scalar.All(0));
             }
         }
 

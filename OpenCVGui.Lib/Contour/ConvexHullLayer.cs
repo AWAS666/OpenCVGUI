@@ -75,11 +75,20 @@ public class ConvexHullLayer : BaseLayer
         Mat result;
         if (DrawOnOriginal)
         {
-            result = input.Clone();
+            Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+            result = PrepareDrawTarget(drawTarget);
         }
         else
         {
-            result = new Mat(input.Size(), input.Type(), Scalar.All(0));
+            Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+            if (drawTarget != null && !drawTarget.Empty())
+            {
+                result = new Mat(drawTarget.Size(), drawTarget.Type(), Scalar.All(0));
+            }
+            else
+            {
+                result = new Mat();
+            }
         }
 
         // Parse colors

@@ -167,7 +167,8 @@ public class TemplateMatchingLayer : BaseLayer
         MatchCount = matchLocations.Count;
 
         // Draw matches on output image
-        Mat result = input.Clone();
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = drawTarget != null && !drawTarget.Empty() ? drawTarget.Clone() : input.Clone();
         if (DrawMatches)
         {
             var (b, g, r) = ColorUtils.HexToBgr(MatchColorHex);

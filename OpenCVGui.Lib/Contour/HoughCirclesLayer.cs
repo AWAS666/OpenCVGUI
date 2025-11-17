@@ -118,15 +118,8 @@ public class HoughCirclesLayer : BaseLayer
         Mat result;
         if (DrawCircles)
         {
-            if (input.Channels() == 3)
-            {
-                result = input.Clone();
-            }
-            else
-            {
-                result = new Mat();
-                Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
-            }
+            Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+            result = PrepareDrawTarget(drawTarget);
 
             // Draw circles
             var (b, g, r) = ColorUtils.HexToBgr(CircleColorHex);

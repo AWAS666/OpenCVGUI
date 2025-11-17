@@ -39,18 +39,9 @@ public class CircleDrawingLayer : BaseLayer
             return new Mat();
         }
 
-        // Prepare output - clone input for drawing
-        Mat result;
-        if (input.Channels() == 3)
-        {
-            result = input.Clone();
-        }
-        else
-        {
-            // Convert grayscale to BGR for colored circle
-            result = new Mat();
-            Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
-        }
+        // Prepare output for drawing
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = PrepareDrawTarget(drawTarget);
 
         var (b, g, r) = ColorUtils.HexToBgr(ColorHex);
         var circleColor = new Scalar(b, g, r);

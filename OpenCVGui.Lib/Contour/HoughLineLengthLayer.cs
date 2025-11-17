@@ -74,18 +74,9 @@ public class HoughLineLengthLayer : BaseLayer
             return new Mat();
         }
 
-        // Prepare output - clone input for drawing
-        Mat result;
-        if (input.Channels() == 3)
-        {
-            result = input.Clone();
-        }
-        else
-        {
-            // Convert grayscale to BGR for colored lines
-            result = new Mat();
-            Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
-        }
+        // Prepare output for drawing
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = PrepareDrawTarget(drawTarget);
 
         // Always convert to grayscale
         Mat gray = new Mat();

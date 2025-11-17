@@ -39,6 +39,43 @@ public abstract class BaseLayer
     /// <returns></returns>
     protected abstract Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null);
 
+    /// <summary>
+    /// Gets the appropriate draw target based on render mode.
+    /// In UI mode: returns chainInput (original user input) if available, otherwise input.
+    /// In Chain mode: returns input (chain output).
+    /// </summary>
+    protected Mat? GetDrawTarget(Mat? input, RenderMode renderMode, Mat? chainInput = null)
+    {
+        if (renderMode == RenderMode.UI && chainInput != null && !chainInput.Empty())
+        {
+            return chainInput;
+        }
+        return input;
+    }
+
+    /// <summary>
+    /// Prepares a BGR Mat for drawing from the draw target.
+    /// Clones the target if it's already BGR, or converts from grayscale to BGR.
+    /// </summary>
+    protected Mat PrepareDrawTarget(Mat? drawTarget)
+    {
+        if (drawTarget == null || drawTarget.Empty())
+        {
+            return new Mat();
+        }
+
+        if (drawTarget.Channels() == 3)
+        {
+            return drawTarget.Clone();
+        }
+        else
+        {
+            Mat result = new Mat();
+            Cv2.CvtColor(drawTarget, result, ColorConversionCodes.GRAY2BGR);
+            return result;
+        }
+    }
+
     public Mat Render(Mat? input, RenderMode renderMode = RenderMode.Chain, Mat? chainInput = null)
     {
         if (!IsEnabled)

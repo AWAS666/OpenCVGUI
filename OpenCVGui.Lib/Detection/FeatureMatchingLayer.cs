@@ -130,7 +130,7 @@ public class FeatureMatchingLayer : BaseLayer
         else
         {
             // No template - just detect and display keypoints on input image
-            return DetectAndDrawKeypoints(input);
+            return DetectAndDrawKeypoints(input, renderMode, chainInput);
         }
 
         // Convert source to grayscale for feature detection (consistent with template)
@@ -233,7 +233,8 @@ public class FeatureMatchingLayer : BaseLayer
         MatchCount = inlierCount >= MinMatches ? 1 : 0;
 
         // Draw bounding box if match found
-        Mat result = input.Clone();
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = drawTarget != null && !drawTarget.Empty() ? drawTarget.Clone() : input.Clone();
         if (DrawMatches && MatchCount > 0 && !homography.Empty())
         {
             // Get template corners
@@ -355,7 +356,7 @@ public class FeatureMatchingLayer : BaseLayer
         _lastLoadedTemplatePath = TemplateImagePath;
     }
 
-    private Mat DetectAndDrawKeypoints(Mat input)
+    private Mat DetectAndDrawKeypoints(Mat input, RenderMode renderMode, Mat? chainInput)
     {
         // Convert to grayscale
         Mat sourceGray = new Mat();
@@ -395,7 +396,8 @@ public class FeatureMatchingLayer : BaseLayer
         descriptors.Dispose();
 
         // Draw keypoints on result
-        Mat result = input.Clone();
+        Mat? drawTarget = GetDrawTarget(input, renderMode, chainInput);
+        Mat result = drawTarget != null && !drawTarget.Empty() ? drawTarget.Clone() : input.Clone();
         if (keypoints != null && keypoints.Length > 0)
         {
             var (b, g, r) = ColorUtils.HexToBgr(MatchColorHex);
