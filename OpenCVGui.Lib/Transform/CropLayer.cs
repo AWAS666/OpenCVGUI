@@ -65,9 +65,11 @@ public class CropLayer : BaseLayer
         var roi = new Rect(x, y, width, height);
         var cropped = new Mat(input, roi);
         var result = cropped.Clone();
-        
+        if (chainInput != null)
+            cropped.CopyTo(chainInput);
+
         cropped.Dispose();
-        
+
         return result;
     }
 }
