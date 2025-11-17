@@ -81,20 +81,7 @@ public class ColorMatchLayer : BaseLayer
         Mat result;
         
         // Determine effective output mode based on render mode
-        ColorMatchOutputMode effectiveMode = OutputMode;
-        if (renderMode == RenderMode.UI)
-        {
-            // For UI, prefer overlay modes for better visualization
-            if (OutputMode == ColorMatchOutputMode.Mask)
-            {
-                effectiveMode = ColorMatchOutputMode.OriginalWithMask;
-            }
-        }
-        else
-        {
-            // For chain, always use mask (actual output for next layer)
-            effectiveMode = ColorMatchOutputMode.Mask;
-        }
+        ColorMatchOutputMode effectiveMode = OutputMode;       
 
         switch (effectiveMode)
         {
@@ -119,6 +106,13 @@ public class ColorMatchLayer : BaseLayer
             default:
                 result = mask.Clone();
                 break;
+        }
+
+        if(renderMode == RenderMode.UI)
+        {
+            Mat overlay = new Mat(chainInput.Size(), chainInput.Type(), new Scalar(0, 255, 0));
+            overlay.CopyTo(chainInput, mask);
+            overlay.Dispose();
         }
 
         // Cleanup
