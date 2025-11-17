@@ -37,7 +37,18 @@ public partial class MainWindowViewModel : ViewModelBase
     private LayerViewModel? _selectedLayer;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPinnedLayer))]
+    [NotifyPropertyChangedFor(nameof(CanPinLayer))]
+    [NotifyPropertyChangedFor(nameof(CanUnpinLayer))]
+    [NotifyPropertyChangedFor(nameof(CanShowPinButton))]
+    private LayerViewModel? _pinnedLayer;
+
+    [ObservableProperty]
     private Bitmap? _displayImage;
+
+    public bool HasPinnedLayer => PinnedLayer != null;
+    
+    public bool CanShowPinButton => !HasPinnedLayer;
 
     [ObservableProperty]
     private bool _isRendering;
@@ -420,6 +431,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         RemoveLayerCommand.NotifyCanExecuteChanged();
         ResetLayerToDefaultsCommand.NotifyCanExecuteChanged();
+        PinLayerCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPinnedLayerChanged(LayerViewModel? oldValue, LayerViewModel? newValue)
+    {
+        // Update IsPinned property on all layers
+        foreach (var layer in Layers)
+        {
+            layer.IsPinned = (layer == newValue);
+        }
+
+        // Re-render when pinning changes
+        if (!IsStreamingActive)
+        {
+            RenderChain();
+        }
+        UnpinLayerCommand.NotifyCanExecuteChanged();
     }
 
     private void UpdateFileParameterVisibility()
@@ -641,8 +669,16 @@ public partial class MainWindowViewModel : ViewModelBase
             var index = Layers.IndexOf(SelectedLayer);
             if (index >= 0)
             {
+                var wasPinned = (SelectedLayer == PinnedLayer);
+                
                 _layerChain.RemoveLayerAt(index);
                 Layers.RemoveAt(index);
+                
+                // Unpin if the removed layer was pinned
+                if (wasPinned)
+                {
+                    PinnedLayer = null;
+                }
                 
                 if (Layers.Count > 0)
                 {
@@ -682,6 +718,25 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public bool CanResetLayerToDefaults => SelectedLayer != null;
+
+    public bool CanPinLayer => SelectedLayer != null;
+
+    [RelayCommand(CanExecute = nameof(CanPinLayer))]
+    private void PinLayer()
+    {
+        if (SelectedLayer != null)
+        {
+            PinnedLayer = SelectedLayer;
+        }
+    }
+
+    public bool CanUnpinLayer => PinnedLayer != null;
+
+    [RelayCommand(CanExecute = nameof(CanUnpinLayer))]
+    private void UnpinLayer()
+    {
+        PinnedLayer = null;
+    }
 
     [RelayCommand(CanExecute = nameof(CanResetLayerToDefaults))]
     private void ResetLayerToDefaults()
@@ -931,6 +986,9 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             SelectedLayer = layerViewModel;
         }
+
+        // Update IsPinned property
+        layerViewModel.IsPinned = (layerViewModel == PinnedLayer);
         
         CheckAndUpdateStreaming();
         
@@ -1024,12 +1082,14 @@ public partial class MainWindowViewModel : ViewModelBase
             Mat? result = null;
             var errors = new List<string>();
 
-            if (SelectedLayer != null)
+            // Use pinned layer if available, otherwise use selected layer
+            var layerToRender = PinnedLayer ?? SelectedLayer;
+            if (layerToRender != null)
             {
-                var selectedIndex = Layers.IndexOf(SelectedLayer);
-                if (selectedIndex >= 0)
+                var layerIndex = Layers.IndexOf(layerToRender);
+                if (layerIndex >= 0)
                 {
-                    result = _layerChain.RenderUpTo(selectedIndex, _sourceImage, currentRenderMode);
+                    result = _layerChain.RenderUpTo(layerIndex, _sourceImage, currentRenderMode);
                 }
             }
             else if (_sourceImage != null)

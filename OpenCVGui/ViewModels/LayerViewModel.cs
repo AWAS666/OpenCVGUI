@@ -20,6 +20,9 @@ public partial class LayerViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSelected;
 
+    [ObservableProperty]
+    private bool _isPinned;
+
     public BaseLayer Layer => _layer;
 
     public string Name
