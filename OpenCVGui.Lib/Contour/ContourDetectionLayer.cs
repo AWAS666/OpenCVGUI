@@ -1,6 +1,7 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
 using OpenCVGui.Lib.Transform;
+using System;
 
 namespace OpenCVGui.Lib.Contour;
 
@@ -34,6 +35,9 @@ public class ContourDetectionLayer : BaseLayer
     [Parameter(DisplayName = "Approximation Mode", Description = "Contour approximation mode", Order = 6)]
     public ContourApproximationModes ApproximationMode { get; set; } = ContourApproximationModes.ApproxSimple;
 
+    [Parameter(DisplayName = "Draw Rotated Rectangle", Description = "If true, draws minimum area rotated rectangle instead of full contour", Order = 7)]
+    public bool DrawRotatedRectangle { get; set; } = false;
+
     public override string GetLayerType() => "ContourDetection";
 
     protected override Mat RenderInternal(Mat? input, RenderMode renderMode, Mat? chainInput = null)
@@ -61,15 +65,30 @@ public class ContourDetectionLayer : BaseLayer
         // Find contours
         Cv2.FindContours(binary, out Point[][] contours, out HierarchyIndex[] hierarchy, RetrievalMode, ApproximationMode);
 
-        // Prepare output
+        // Prepare output - convert to BGR if needed for colored contours
         Mat result;
         if (DrawOnOriginal)
         {
-            result = input.Clone();
+            if (input.Channels() == 3)
+            {
+                result = input.Clone();
+            }
+            else
+            {
+                result = new Mat();
+                Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
+            }
         }
         else
         {
-            result = new Mat(input.Size(), input.Type(), Scalar.All(0));
+            if (input.Channels() == 3)
+            {
+                result = new Mat(input.Size(), input.Type(), Scalar.All(0));
+            }
+            else
+            {
+                result = new Mat(input.Size(), MatType.CV_8UC3, Scalar.All(0));
+            }
         }
 
         // Draw contours
@@ -80,7 +99,18 @@ public class ContourDetectionLayer : BaseLayer
             var area = Cv2.ContourArea(contour);
             if (area >= MinArea && (MaxArea <= 0 || area <= MaxArea))
             {
-                Cv2.DrawContours(result, new[] { contour }, -1, contourColor, LineThickness);
+                if (DrawRotatedRectangle)
+                {
+                    RotatedRect rect = Cv2.MinAreaRect(contour);
+                    Point2f[] box = rect.Points();
+                    Point[] intBox = Array.ConvertAll(box, p => new Point((int)p.X, (int)p.Y));
+                    Cv2.DrawContours(result, new[] { intBox }, -1, contourColor, LineThickness);
+                    Cv2.PutText(result, $"{rect.Size.Width}", new Point(rect.Center.X, rect.Center.Y-rect.Size.Height), HersheyFonts.HersheySimplex, 1, contourColor);
+                }
+                else
+                {
+                    Cv2.DrawContours(result, new[] { contour }, -1, contourColor, LineThickness);
+                }
             }
         }
 
