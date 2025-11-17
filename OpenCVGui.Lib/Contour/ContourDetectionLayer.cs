@@ -47,47 +47,60 @@ public class ContourDetectionLayer : BaseLayer
             return new Mat();
         }
 
-        // Convert to grayscale if needed
-        Mat gray = new Mat();
-        if (input.Channels() == 3)
+        // Processing: always use input (chain output from previous layers)
+        // This is what most layers work on
+        Mat processingMat = new Mat();
+        if (input.Channels() == 1)
         {
-            Cv2.CvtColor(input, gray, ColorConversionCodes.BGR2GRAY);
+            processingMat = input.Clone();
         }
         else
         {
-            gray = input.Clone();
+            Cv2.CvtColor(input, processingMat, ColorConversionCodes.BGR2GRAY);
         }
 
         // Apply threshold to get binary image
         Mat binary = new Mat();
-        Cv2.Threshold(gray, binary, 127, 255, ThresholdTypes.Binary);
+        Cv2.Threshold(processingMat, binary, 127, 255, ThresholdTypes.Binary);
 
         // Find contours
         Cv2.FindContours(binary, out Point[][] contours, out HierarchyIndex[] hierarchy, RetrievalMode, ApproximationMode);
 
-        // Prepare output - convert to BGR if needed for colored contours
+        // Prepare output for drawing
+        // In UI mode: draw on chainInput (original user input) if available, otherwise input
+        // In Chain mode: draw on input (chain output)
+        Mat? drawTarget = null;
+        if (renderMode == RenderMode.UI && chainInput != null && !chainInput.Empty())
+        {
+            drawTarget = chainInput;
+        }
+        else
+        {
+            drawTarget = input;
+        }
+
         Mat result;
         if (DrawOnOriginal)
         {
-            if (input.Channels() == 3)
+            if (drawTarget!.Channels() == 3)
             {
-                result = input.Clone();
+                result = drawTarget.Clone();
             }
             else
             {
                 result = new Mat();
-                Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
+                Cv2.CvtColor(drawTarget, result, ColorConversionCodes.GRAY2BGR);
             }
         }
         else
         {
-            if (input.Channels() == 3)
+            if (drawTarget!.Channels() == 3)
             {
-                result = new Mat(input.Size(), input.Type(), Scalar.All(0));
+                result = new Mat(drawTarget.Size(), drawTarget.Type(), Scalar.All(0));
             }
             else
             {
-                result = new Mat(input.Size(), MatType.CV_8UC3, Scalar.All(0));
+                result = new Mat(drawTarget.Size(), MatType.CV_8UC3, Scalar.All(0));
             }
         }
 
@@ -114,7 +127,7 @@ public class ContourDetectionLayer : BaseLayer
             }
         }
 
-        gray.Dispose();
+        processingMat.Dispose();
         binary.Dispose();
 
         return result;

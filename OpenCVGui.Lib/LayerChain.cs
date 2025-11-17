@@ -123,154 +123,53 @@ public class LayerChain
         if (layerIndex < 0 || layerIndex >= _layers.Count)
             throw new ArgumentOutOfRangeException(nameof(layerIndex));
 
-        if (renderMode == RenderMode.UI)
+        Mat? current = inputImage;
+        Mat? originalInput = inputImage; // For drawing in UI mode - will be set from first layer if inputImage is null
+        List<Mat> intermediateMats = new List<Mat>();
+
+        try
         {
-            // In UI mode: render previous layers in Chain mode to get processing output,
-            // then render current layer in UI mode with both chain output (for processing)
-            // and UI output from previous layers (for visualization)
-            Mat? chainOutput = inputImage;
-            Mat? uiOutput = inputImage;
-            Mat? result = null;
-            List<Mat> intermediateMats = new List<Mat>();
-
-            try
+            // If inputImage is null, we need to get the first layer's output as the original input
+            if (inputImage == null && layerIndex >= 0)
             {
-                // Render all previous layers in Chain mode to get processing output
-                for (int i = 0; i < layerIndex; i++)
-                {
-                    var layer = _layers[i];
-                    if (layer.IsEnabled)
-                    {
-                        try
-                        {
-                            var newChainOutput = layer.Render(chainOutput, RenderMode.Chain);
-                            // Track intermediate results for disposal (but not inputImage)
-                            if (chainOutput != inputImage && chainOutput != null)
-                            {
-                                intermediateMats.Add(chainOutput);
-                            }
-                            chainOutput = newChainOutput;
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error in layer {layer.GetLayerType()}: {ex.Message}");
-                            if (chainOutput == null || chainOutput.Empty())
-                            {
-                                chainOutput = new Mat();
-                            }
-                        }
-                    }
-                }
-
-                // Render previous layers in UI mode to get visualization output
-                for (int i = 0; i < layerIndex; i++)
-                {
-                    var layer = _layers[i];
-                    if (layer.IsEnabled)
-                    {
-                        try
-                        {
-                            var newUiOutput = layer.Render(uiOutput, RenderMode.UI);
-                            // Track intermediate results for disposal (but not inputImage)
-                            if (uiOutput != inputImage && uiOutput != null)
-                            {
-                                intermediateMats.Add(uiOutput);
-                            }
-                            uiOutput = newUiOutput;
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Error in layer {layer.GetLayerType()}: {ex.Message}");
-                            if (uiOutput == null || uiOutput.Empty())
-                            {
-                                uiOutput = new Mat();
-                            }
-                        }
-                    }
-                }
-
-                // Render current layer in UI mode, passing both UI output (for drawing)
-                // and chain output (for processing)
-                var currentLayer = _layers[layerIndex];
-                if (currentLayer.IsEnabled)
+                var firstLayer = _layers[0];
+                if (firstLayer.IsEnabled)
                 {
                     try
                     {
-                        // Pass uiOutput as the main input (for visualization/drawing)
-                        // and chainOutput as chainInput (for processing)
-                        result = currentLayer.Render(uiOutput, RenderMode.UI, chainOutput);
+                        originalInput = firstLayer.Render(null, RenderMode.Chain);
+                        current = originalInput.Clone();
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Error in layer {currentLayer.GetLayerType()}: {ex.Message}");
-                        result = uiOutput?.Clone() ?? new Mat();
+                        System.Diagnostics.Debug.WriteLine($"Error in first layer {firstLayer.GetLayerType()}: {ex.Message}");
+                        originalInput = new Mat();
+                        current = new Mat();
                     }
                 }
-                else
-                {
-                    result = uiOutput?.Clone() ?? new Mat();
-                }
-
-                // Cleanup intermediate results (they've been cloned or used)
-                // Don't dispose chainOutput or uiOutput if they're the same as result
-                if (chainOutput != inputImage && chainOutput != null && chainOutput != result)
-                {
-                    intermediateMats.Add(chainOutput);
-                }
-                if (uiOutput != inputImage && uiOutput != null && uiOutput != result)
-                {
-                    intermediateMats.Add(uiOutput);
-                }
-
-                // Dispose all intermediate Mat objects
-                foreach (var mat in intermediateMats)
-                {
-                    if (mat != null && !mat.IsDisposed)
-                    {
-                        mat.Dispose();
-                    }
-                }
-
-                return result ?? new Mat();
             }
-            catch
-            {
-                // Cleanup on error
-                foreach (var mat in intermediateMats)
-                {
-                    if (mat != null && !mat.IsDisposed)
-                    {
-                        mat.Dispose();
-                    }
-                }
-                if (chainOutput != inputImage && chainOutput != null && !chainOutput.IsDisposed)
-                {
-                    chainOutput.Dispose();
-                }
-                if (uiOutput != inputImage && uiOutput != null && !uiOutput.IsDisposed)
-                {
-                    uiOutput.Dispose();
-                }
-                if (result != null && !result.IsDisposed)
-                {
-                    result.Dispose();
-                }
-                throw;
-            }
-        }
-        else
-        {
-            // In Chain mode: all layers render in Chain mode
-            Mat? current = inputImage;
 
-            for (int i = 0; i <= layerIndex; i++)
+            // Render all layers up to and including the current one
+            // Skip the first layer if inputImage was null (we already rendered it above)
+            int startIndex = (inputImage == null) ? 1 : 0;
+            for (int i = startIndex; i <= layerIndex; i++)
             {
                 var layer = _layers[i];
                 if (layer.IsEnabled)
                 {
                     try
                     {
-                        current = layer.Render(current, RenderMode.Chain);
+                        // In UI mode, pass originalInput as chainInput for drawing
+                        // In Chain mode, chainInput is null (not used)
+                        Mat? chainInput = (renderMode == RenderMode.UI) ? originalInput : null;
+                        var newCurrent = layer.Render(current, renderMode, chainInput);
+                        
+                        // Track intermediate results for disposal (but not originalInput or inputImage)
+                        if (current != inputImage && current != originalInput && current != null)
+                        {
+                            intermediateMats.Add(current);
+                        }
+                        current = newCurrent;
                     }
                     catch (Exception ex)
                     {
@@ -283,7 +182,42 @@ public class LayerChain
                 }
             }
 
+            // Cleanup intermediate results (they've been cloned or used)
+            if (originalInput != inputImage && originalInput != null && originalInput != current)
+            {
+                intermediateMats.Add(originalInput);
+            }
+
+            // Dispose all intermediate Mat objects
+            foreach (var mat in intermediateMats)
+            {
+                if (mat != null && !mat.IsDisposed)
+                {
+                    mat.Dispose();
+                }
+            }
+
             return current ?? new Mat();
+        }
+        catch
+        {
+            // Cleanup on error
+            foreach (var mat in intermediateMats)
+            {
+                if (mat != null && !mat.IsDisposed)
+                {
+                    mat.Dispose();
+                }
+            }
+            if (current != inputImage && current != originalInput && current != null && !current.IsDisposed)
+            {
+                current.Dispose();
+            }
+            if (originalInput != inputImage && originalInput != null && !originalInput.IsDisposed)
+            {
+                originalInput.Dispose();
+            }
+            throw;
         }
     }
 
