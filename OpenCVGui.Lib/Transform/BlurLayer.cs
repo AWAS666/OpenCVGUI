@@ -12,11 +12,11 @@ public class BlurLayer : BaseLayer
     public BlurType BlurType { get; set; } = BlurType.Gaussian;
 
     [Parameter(DisplayName = "Kernel Size X", Description = "Size of the blur kernel (must be odd number, e.g., 3, 5, 7)", Order = 1)]
-    [ParameterRange(3, 51, 2)]
+    [ParameterRange(1, 101, 2)]
     public int KernelSizeX { get; set; } = 5;
 
     [Parameter(DisplayName = "Kernel Size", Description = "Size of the blur kernel (must be odd number, e.g., 3, 5, 7)", Order = 2)]
-    [ParameterRange(3, 51, 2)]
+    [ParameterRange(1, 101, 2)]
     public int KernelSizeY { get; set; } = 5;
 
     [Parameter(DisplayName = "Sigma X", Description = "Gaussian kernel standard deviation in X direction (for Gaussian blur)", Order = 3)]

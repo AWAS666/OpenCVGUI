@@ -44,11 +44,11 @@ public class BinaryThresholdLayer : BaseLayer
     public int AreaMinSmallBox { get; set; } = 3000;
 
     [Parameter(DisplayName = "Blur Size X", Description = "Gaussian blur kernel width", Order = 3)]
-    [ParameterRange(1, 100, 1)]
+    [ParameterRange(1, 101, 2)]
     public int BlurSizeX { get; set; } = 7;
 
     [Parameter(DisplayName = "Blur Size Y", Description = "Gaussian blur kernel height", Order = 4)]
-    [ParameterRange(1, 100, 1)]
+    [ParameterRange(1, 101, 2)]
     public int BlurSizeY { get; set; } = 25;
 
     [Parameter(DisplayName = "Blur Amount (Sigma)", Description = "Gaussian blur sigma value (standard deviation). Higher values = more blur", Order = 5)]
