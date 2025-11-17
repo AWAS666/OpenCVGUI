@@ -91,17 +91,29 @@ public class BinaryThresholdLayer : BaseLayer
             return new Mat();
         }
 
-        // Prepare output - clone input for drawing
-        Mat result;
-        if (input.Channels() == 3)
+        // Determine draw target
+        // In UI mode: draw on chainInput (original user input) if available, otherwise input
+        // In Chain mode: draw on input (chain output)
+        Mat? drawTarget = null;
+        if (renderMode == RenderMode.UI && chainInput != null && !chainInput.Empty())
         {
-            result = input.Clone();
+            drawTarget = chainInput;
         }
         else
         {
-            // Convert grayscale to BGR for colored rectangles
+            drawTarget = input;
+        }
+
+        // Prepare output for drawing - convert to BGR if needed for colored rectangles
+        Mat result;
+        if (drawTarget!.Channels() == 3)
+        {
+            result = drawTarget.Clone();
+        }
+        else
+        {
             result = new Mat();
-            Cv2.CvtColor(input, result, ColorConversionCodes.GRAY2BGR);
+            Cv2.CvtColor(drawTarget, result, ColorConversionCodes.GRAY2BGR);
         }
 
         // Convert to target color space if needed
