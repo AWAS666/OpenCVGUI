@@ -174,6 +174,9 @@ public class BinaryThresholdLayer : BaseLayer
         var outerColor = new Scalar(outerB, outerG, outerR);
         RotatedRect outerBox = FindBox(blurredChannel, result, OuterThreshold, 40000, outerColor);
 
+        double channel = GetChannelAvg(blurredChannel, outerBox);
+        Cv2.PutText(result, $"Ch Avg: {channel:F2}", new Point(outerBox.Center.X, 30), HersheyFonts.HersheySimplex, 1, outerColor, 1);
+
         // Cleanup
         if (ColorSpace != ColorSpaceType.BGR || input.Channels() != 3)
         {
@@ -268,6 +271,15 @@ public class BinaryThresholdLayer : BaseLayer
             centroids?.Dispose();
             mask?.Dispose();
         }
+    }
+
+    private double GetChannelAvg(Mat blurredChannel, RotatedRect outer)
+    {
+        if (outer.Size.Width == 0 || outer.Size.Height == 0) return 0;
+        using var roi = new Mat(blurredChannel, outer.BoundingRect());
+
+        Scalar mean = Cv2.Mean(roi);
+        return mean.Val0;
     }
 }
 
