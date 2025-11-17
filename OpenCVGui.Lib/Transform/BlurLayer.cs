@@ -11,23 +11,27 @@ public class BlurLayer : BaseLayer
     [Parameter(DisplayName = "Blur Type", Description = "Type of blur to apply", Order = 0)]
     public BlurType BlurType { get; set; } = BlurType.Gaussian;
 
-    [Parameter(DisplayName = "Kernel Size", Description = "Size of the blur kernel (must be odd number, e.g., 3, 5, 7)", Order = 1)]
+    [Parameter(DisplayName = "Kernel Size X", Description = "Size of the blur kernel (must be odd number, e.g., 3, 5, 7)", Order = 1)]
     [ParameterRange(3, 51, 2)]
-    public int KernelSize { get; set; } = 5;
+    public int KernelSizeX { get; set; } = 5;
 
-    [Parameter(DisplayName = "Sigma X", Description = "Gaussian kernel standard deviation in X direction (for Gaussian blur)", Order = 2)]
+    [Parameter(DisplayName = "Kernel Size", Description = "Size of the blur kernel (must be odd number, e.g., 3, 5, 7)", Order = 2)]
+    [ParameterRange(3, 51, 2)]
+    public int KernelSizeY { get; set; } = 5;
+
+    [Parameter(DisplayName = "Sigma X", Description = "Gaussian kernel standard deviation in X direction (for Gaussian blur)", Order = 3)]
     [ParameterRange(0.0, 10.0, 0.1)]
     public double SigmaX { get; set; } = 0.0;
 
-    [Parameter(DisplayName = "Sigma Y", Description = "Gaussian kernel standard deviation in Y direction (for Gaussian blur, 0 = same as SigmaX)", Order = 3)]
+    [Parameter(DisplayName = "Sigma Y", Description = "Gaussian kernel standard deviation in Y direction (for Gaussian blur, 0 = same as SigmaX)", Order = 4)]
     [ParameterRange(0.0, 10.0, 0.1)]
     public double SigmaY { get; set; } = 0.0;
 
-    [Parameter(DisplayName = "Color Sigma", Description = "Filter sigma in the color space (for Bilateral blur)", Order = 4)]
+    [Parameter(DisplayName = "Color Sigma", Description = "Filter sigma in the color space (for Bilateral blur)", Order = 5)]
     [ParameterRange(0.0, 200.0, 1.0)]
     public double ColorSigma { get; set; } = 50.0;
 
-    [Parameter(DisplayName = "Space Sigma", Description = "Filter sigma in the coordinate space (for Bilateral blur)", Order = 5)]
+    [Parameter(DisplayName = "Space Sigma", Description = "Filter sigma in the coordinate space (for Bilateral blur)", Order = 6)]
     [ParameterRange(0.0, 200.0, 1.0)]
     public double SpaceSigma { get; set; } = 50.0;
 
@@ -41,10 +45,16 @@ public class BlurLayer : BaseLayer
         }
 
         // Ensure kernel size is odd
-        int kernelSize = KernelSize;
-        if (kernelSize % 2 == 0)
+        int kernelSizex = KernelSizeX;
+        if (kernelSizex % 2 == 0)
         {
-            kernelSize += 1;
+            kernelSizex += 1;
+        }
+
+        int kernelSizey = KernelSizeY;
+        if (kernelSizey % 2 == 0)
+        {
+            kernelSizey += 1;
         }
 
         Mat result = new Mat();
@@ -57,29 +67,29 @@ public class BlurLayer : BaseLayer
                 if (sigmaX == 0.0)
                 {
                     // Auto-calculate sigma based on kernel size
-                    sigmaX = 0.3 * ((kernelSize - 1) * 0.5 - 1) + 0.8;
+                    sigmaX = 0.3 * ((kernelSizex - 1) * 0.5 - 1) + 0.8;
                 }
                 if (sigmaY == 0.0)
                 {
                     sigmaY = sigmaX;
                 }
-                Cv2.GaussianBlur(input, result, new Size(kernelSize, kernelSize), sigmaX, sigmaY);
+                Cv2.GaussianBlur(input, result, new Size(kernelSizex, kernelSizey), sigmaX, sigmaY);
                 break;
 
             case BlurType.Median:
-                Cv2.MedianBlur(input, result, kernelSize);
+                Cv2.MedianBlur(input, result, kernelSizex);
                 break;
 
             case BlurType.Bilateral:
-                Cv2.BilateralFilter(input, result, kernelSize, ColorSigma, SpaceSigma);
+                Cv2.BilateralFilter(input, result, kernelSizex, ColorSigma, SpaceSigma);
                 break;
 
             case BlurType.Box:
-                Cv2.Blur(input, result, new Size(kernelSize, kernelSize));
+                Cv2.Blur(input, result, new Size(kernelSizex, kernelSizey));
                 break;
 
             default:
-                Cv2.GaussianBlur(input, result, new Size(kernelSize, kernelSize), 0, 0);
+                Cv2.GaussianBlur(input, result, new Size(kernelSizex, kernelSizey), 0, 0);
                 break;
         }
 
