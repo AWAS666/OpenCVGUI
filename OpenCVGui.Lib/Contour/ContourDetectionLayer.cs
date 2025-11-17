@@ -106,7 +106,8 @@ public class ContourDetectionLayer : BaseLayer
                     Point2f[] box = rect.Points();
                     Point[] intBox = Array.ConvertAll(box, p => new Point((int)p.X, (int)p.Y));
                     Cv2.DrawContours(result, new[] { intBox }, -1, contourColor, LineThickness);
-                    Cv2.PutText(result, $"{rect.Size.Width}", new Point(rect.Center.X, rect.Center.Y-rect.Size.Height), HersheyFonts.HersheySimplex, 1, contourColor);
+                    var width = box.Max(x => x.X) - box.Min(x => x.X);
+                    Cv2.PutText(result, $"{width}", new Point(rect.Center.X, rect.Center.Y), HersheyFonts.HersheySimplex, 1, contourColor);
                 }
                 else
                 {
