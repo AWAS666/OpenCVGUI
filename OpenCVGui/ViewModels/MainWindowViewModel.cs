@@ -16,6 +16,10 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Media.Imaging;
 using Avalonia.Media;
+using Avalonia;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Microsoft.VisualBasic;
 
 namespace OpenCVGui.ViewModels;
 
@@ -47,7 +51,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private Bitmap? _displayImage;
 
     public bool HasPinnedLayer => PinnedLayer != null;
-    
+
     public bool CanShowPinButton => !HasPinnedLayer;
 
     [ObservableProperty]
@@ -79,13 +83,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _hasErrors;
 
     public bool IsUIRenderMode => RenderMode == RenderMode.UI;
-    
+
     public bool IsChainRenderMode => RenderMode == RenderMode.Chain;
 
     public IBrush UIRenderModeIconColor => IsUIRenderMode ? Brushes.Green : Brushes.Gray;
-    
+
     public IBrush ChainRenderModeIconColor => IsChainRenderMode ? Brushes.Blue : Brushes.Gray;
-    
+
     /// <summary>
     /// Total runtime of all layers in milliseconds
     /// </summary>
@@ -96,19 +100,19 @@ public partial class MainWindowViewModel : ViewModelBase
             return Layers.Sum(layer => layer.LastRuntime);
         }
     }
-    
+
     public double ZoomLevel
     {
         get => _viewportService.ZoomLevel;
         set => _viewportService.ZoomLevel = value;
     }
-    
+
     public double PanX
     {
         get => _viewportService.PanX;
         set => _viewportService.PanX = value;
     }
-    
+
     public double PanY
     {
         get => _viewportService.PanY;
@@ -121,34 +125,34 @@ public partial class MainWindowViewModel : ViewModelBase
         _viewportService.ZoomIn();
         OnPropertyChanged(nameof(ZoomLevel));
     }
-    
+
     [RelayCommand]
     private void ZoomOut()
     {
         _viewportService.ZoomOut();
         OnPropertyChanged(nameof(ZoomLevel));
     }
-    
+
     [RelayCommand]
     private void FitToView()
     {
         if (DisplayImage == null)
             return;
-            
+
         _viewportService.FitToView();
         OnPropertyChanged(nameof(ZoomLevel));
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
     }
-    
+
     public void ZoomAtPoint(double delta, double x, double y)
     {
         if (DisplayImage == null)
             return;
-            
+
         var oldZoom = ZoomLevel;
         _viewportService.ZoomAtPoint(delta, x, y, DisplayImage);
-        
+
         if (Math.Abs(ZoomLevel - oldZoom) > 0.001)
         {
             OnPropertyChanged(nameof(ZoomLevel));
@@ -156,7 +160,7 @@ public partial class MainWindowViewModel : ViewModelBase
             OnPropertyChanged(nameof(PanY));
         }
     }
-    
+
     public void PanImage(double deltaX, double deltaY)
     {
         _viewportService.PanImage(deltaX, deltaY);
@@ -185,7 +189,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var existingWindow = windows.Windows.OfType<OpenCVGui.Views.CustomControlWindow>()
                 .FirstOrDefault(w => w.DataContext == SelectedLayer);
-            
+
             if (existingWindow != null)
             {
                 existingWindow.Activate();
@@ -198,7 +202,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 DataContext = SelectedLayer,
                 WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
             };
-            
+
             // Set owner to main window
             var mainWindow = windows.MainWindow;
             if (mainWindow != null)
@@ -220,18 +224,18 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isStreamingPaused = false;
 
     public bool IsStreamingPlaying => !IsStreamingPaused;
-    
+
     public bool IsStreamingActive => IsStreamingActiveInternal();
-    
+
     public string PauseButtonIcon => IsStreamingPaused ? "Play" : "Pause";
-    
+
     public string PauseButtonTooltip => IsStreamingPaused ? "Resume Streaming" : "Pause Streaming";
 
     partial void OnRenderModeChanged(RenderMode value)
     {
         RenderChain();
     }
-    
+
     partial void OnIsStreamingPausedChanged(bool value)
     {
         StepFrameForwardCommand.NotifyCanExecuteChanged();
@@ -318,7 +322,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             // Get the current rendered image Mat
             Mat? sourceMat = null;
-            
+
             if (SelectedLayer != null)
             {
                 var selectedIndex = Layers.IndexOf(SelectedLayer);
@@ -344,9 +348,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
             // Dispose old crop data if exists
             CurrentCropData?.Dispose();
-            
+
             CurrentCropData = _cropService.CreateCropData(sourceMat, x, y, width, height);
-            
+
             // Clean up temporary source mat
             if (sourceMat != _sourceImage)
             {
@@ -368,45 +372,45 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         NotifyStreamingStateChanged();
     }
-    
+
     public bool CanStepFrames => IsStreamingActive && IsStreamingPaused;
-    
+
     [RelayCommand(CanExecute = nameof(CanStepFrames))]
     private void StepFrameForward()
     {
         if (!IsStreamingActive || !IsStreamingPaused)
             return;
-            
+
         var videoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
             .FirstOrDefault(l => l.IsEnabled && l.Streaming);
-            
+
         if (videoLayer != null)
         {
             videoLayer.StepForward();
         }
-        
+
         // Trigger a single frame render
         RenderChain();
     }
-    
+
     [RelayCommand(CanExecute = nameof(CanStepFrames))]
     private void StepFrameBackward()
     {
         if (!IsStreamingActive || !IsStreamingPaused)
             return;
-            
+
         var videoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
             .FirstOrDefault(l => l.IsEnabled && l.Streaming);
-            
+
         if (videoLayer != null)
         {
             videoLayer.StepBackward();
         }
-        
+
         // Trigger a single frame render
         RenderChain();
     }
-    
+
     private bool IsStreamingActiveInternal()
     {
         return _streamingTask != null && !_streamingTask.IsCompleted;
@@ -468,7 +472,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var fileAttr = fileParam.GetFileAttribute();
         var fileTypeFilter = new List<FilePickerFileType>();
-        
+
         if (!string.IsNullOrEmpty(fileAttr?.Filter))
         {
             // Parse filter string like "Image files|*.png;*.jpg"
@@ -482,7 +486,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 });
             }
         }
-        
+
         if (fileTypeFilter.Count == 0)
         {
             fileTypeFilter.Add(FilePickerFileTypes.ImageAll);
@@ -498,10 +502,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (files != null && files.Count > 0 && files[0].Path.IsFile)
         {
             var filePath = files[0].Path.LocalPath;
-            
+
             // Set the file path parameter
             fileParam.Value = filePath;
-            
+
             // Also load the image for direct display if it's an ImageImportLayer
             if (SelectedLayer.Layer is OpenCVGui.Lib.Import.ImageImportLayer)
             {
@@ -516,6 +520,54 @@ public partial class MainWindowViewModel : ViewModelBase
                 RenderChain();
             }
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyImageToClipboard))]
+    private async Task CopyImageToClipboardAsync()
+    {
+        if (DisplayImage == null)
+            return;
+
+        try
+        {
+            var appLifetime = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+            var mainWindow = appLifetime?.MainWindow;
+
+            if (mainWindow == null)
+                return;
+            var topLevel = TopLevel.GetTopLevel(mainWindow);
+            var clipboard = topLevel?.Clipboard;
+
+            if (clipboard != null)
+            {
+                using var memoryStream = new MemoryStream();
+                DisplayImage.Save(memoryStream);
+                memoryStream.Position = 0;
+
+                // avalonia doesn't seem to support clipboard from memorystream, so we save a temp file instead as a workaround
+                var tempPath = Path.Combine(Path.GetTempPath(), "opencvgui.png");
+                await using (var fs = File.Create(tempPath))
+                    await memoryStream.CopyToAsync(fs);
+
+                var file = await topLevel.StorageProvider.TryGetFileFromPathAsync(tempPath);
+
+                var dataTransfer = new DataTransfer();
+                dataTransfer.Add(DataTransferItem.CreateFile(file));
+                await clipboard.SetDataAsync(dataTransfer);
+
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error copying image to clipboard: {ex.Message}");
+        }
+    }
+
+    public bool CanCopyImageToClipboard => DisplayImage != null;
+
+    partial void OnDisplayImageChanged(Bitmap? value)
+    {
+        CopyImageToClipboardCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -573,7 +625,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     var filePath = file.Path.LocalPath;
                     var extension = Path.GetExtension(filePath).ToLowerInvariant();
-                    
+
                     if (extension == ".jpg" || extension == ".jpeg")
                     {
                         Cv2.ImWrite(filePath, result, new int[] { (int)ImwriteFlags.JpegQuality, 95 });
@@ -628,10 +680,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _fileDialogService = fileDialogService;
         _viewportService = viewportService;
         _cropService = cropService;
-        
+
         // Initialize layer factory
         LayerFactory.Initialize();
-        
+
         // Populate available layer types
         var layerTypes = LayerFactory.GetAllLayerTypesWithNames();
         foreach (var kvp in layerTypes.OrderBy(x => x.Value))
@@ -670,16 +722,16 @@ public partial class MainWindowViewModel : ViewModelBase
             if (index >= 0)
             {
                 var wasPinned = (SelectedLayer == PinnedLayer);
-                
+
                 _layerChain.RemoveLayerAt(index);
                 Layers.RemoveAt(index);
-                
+
                 // Unpin if the removed layer was pinned
                 if (wasPinned)
                 {
                     PinnedLayer = null;
                 }
-                
+
                 if (Layers.Count > 0)
                 {
                     SelectedLayer = index < Layers.Count ? Layers[index] : Layers[Layers.Count - 1];
@@ -688,14 +740,14 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     SelectedLayer = null;
                 }
-                
+
                 CheckAndUpdateStreaming();
-                
+
                 if (!IsStreamingActive)
                 {
                     RenderChain();
                 }
-                
+
                 RemoveLayerCommand.NotifyCanExecuteChanged();
             }
         }
@@ -748,31 +800,31 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 // Get the layer type
                 var layerType = SelectedLayer.Layer.GetLayerType();
-                
+
                 // Preserve the layer name and enabled state
                 var oldName = SelectedLayer.Layer.Name;
                 var oldEnabled = SelectedLayer.Layer.IsEnabled;
-                
+
                 // Create a new instance with default values
                 var newLayer = LayerFactory.CreateLayer(layerType);
                 newLayer.Name = oldName;
                 newLayer.IsEnabled = oldEnabled;
-                
+
                 // Replace in layer chain
                 _layerChain.RemoveLayerAt(index);
                 _layerChain.InsertLayer(index, newLayer);
-                
+
                 // Replace in Layers collection
                 var newLayerViewModel = new LayerViewModel(newLayer);
-                
+
                 SubscribeToLayerViewModel(newLayerViewModel);
-                
+
                 Layers[index] = newLayerViewModel;
                 SelectedLayer = newLayerViewModel;
-                
+
                 UpdateFileParameterVisibility();
                 CheckAndUpdateStreaming();
-                
+
                 if (!IsStreamingActive)
                 {
                     RenderChain();
@@ -819,7 +871,7 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             string? filePath = null;
-            
+
             // Check if there's a last loaded file path
             var lastFile = SessionManager.GetLastLoadedFile();
             if (lastFile != null && File.Exists(lastFile))
@@ -832,12 +884,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 // Show save dialog
                 filePath = await ShowSaveDialogAsync();
             }
-            
+
             if (filePath != null)
             {
                 var xml = LayerChainSerializer.Serialize(_layerChain);
                 await File.WriteAllTextAsync(filePath, xml);
-                
+
                 // Update the session with the saved file path
                 SessionManager.SaveLastLoadedFile(filePath);
             }
@@ -848,19 +900,19 @@ public partial class MainWindowViewModel : ViewModelBase
             System.Diagnostics.Debug.WriteLine($"Error saving chain: {ex.Message}");
         }
     }
-    
+
     [RelayCommand]
     private async Task SaveAsChainAsync()
     {
         try
         {
             var filePath = await ShowSaveDialogAsync();
-            
+
             if (filePath != null)
             {
                 var xml = LayerChainSerializer.Serialize(_layerChain);
                 await File.WriteAllTextAsync(filePath, xml);
-                
+
                 // Update the session with the saved file path
                 SessionManager.SaveLastLoadedFile(filePath);
             }
@@ -871,7 +923,7 @@ public partial class MainWindowViewModel : ViewModelBase
             System.Diagnostics.Debug.WriteLine($"Error saving chain: {ex.Message}");
         }
     }
-    
+
     private async Task<string?> ShowSaveDialogAsync()
     {
         var file = await _fileDialogService.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -892,7 +944,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             return file.Path.LocalPath;
         }
-        
+
         return null;
     }
 
@@ -918,7 +970,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await LoadChainFromFileAsync(filePath);
         }
     }
-    
+
     /// <summary>
     /// Loads a chain from a file path (used by both manual load and session restore)
     /// </summary>
@@ -928,27 +980,27 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var xml = await File.ReadAllTextAsync(filePath);
             var chain = LayerChainSerializer.Deserialize(xml);
-            
+
             // Replace current chain
             StopStreaming();
             _layerChain.Clear();
             Layers.Clear();
-            
+
             foreach (var layer in chain.Layers)
             {
                 AddLayerToChain(layer, false);
             }
-            
+
             if (Layers.Count > 0)
             {
                 SelectedLayer = Layers[0];
             }
-            
+
             // Save the loaded file path for session restore
             SessionManager.SaveLastLoadedFile(filePath);
-            
+
             CheckAndUpdateStreaming();
-            
+
             if (!IsStreamingActive)
             {
                 RenderChain();
@@ -960,7 +1012,7 @@ public partial class MainWindowViewModel : ViewModelBase
             System.Diagnostics.Debug.WriteLine($"Error loading chain: {ex.Message}");
         }
     }
-    
+
     /// <summary>
     /// Restores the last session by loading the last saved file if it exists
     /// </summary>
@@ -977,11 +1029,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _layerChain.AddLayer(layer);
         var layerViewModel = new LayerViewModel(layer);
-        
+
         SubscribeToLayerViewModel(layerViewModel);
-        
+
         Layers.Add(layerViewModel);
-        
+
         if (SelectedLayer == null)
         {
             SelectedLayer = layerViewModel;
@@ -989,9 +1041,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // Update IsPinned property
         layerViewModel.IsPinned = (layerViewModel == PinnedLayer);
-        
+
         CheckAndUpdateStreaming();
-        
+
         if (renderAfter && !IsStreamingActive)
         {
             RenderChain();
@@ -1015,13 +1067,13 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
             };
         }
-        
+
         // Update file parameter visibility when parameters change
         layerViewModel.Parameters.CollectionChanged += (s, e) =>
         {
             UpdateFileParameterVisibility();
         };
-        
+
         // Subscribe to enabled changes
         layerViewModel.PropertyChanged += (s, e) =>
         {
@@ -1112,19 +1164,19 @@ public partial class MainWindowViewModel : ViewModelBase
             }
 
             var bitmap = ImageConverter.MatToBitmapSafe(result);
-            
+
             // Update UI on main thread
             // Old frame stays visible until this update happens
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 DisplayImage = bitmap;
-                
+
                 // Refresh runtime display
                 foreach (var layer in Layers)
                 {
                     layer.RefreshRuntime();
                 }
-                
+
                 // Notify TotalRuntime after refreshing layer runtimes
                 OnPropertyChanged(nameof(TotalRuntime));
 
@@ -1199,7 +1251,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         isPaused = IsStreamingPaused;
                     }
-                    
+
                     if (isPaused)
                     {
                         await Task.Delay(100, cancellationToken);
@@ -1211,7 +1263,7 @@ public partial class MainWindowViewModel : ViewModelBase
                         .FirstOrDefault(l => l.IsEnabled && l.Streaming);
                     var currentVideoLayer = _layerChain.Layers.OfType<OpenCVGui.Lib.Import.VideoLayer>()
                         .FirstOrDefault(l => l.IsEnabled && l.Streaming);
-                    
+
                     if (currentWebcamLayer == null && currentVideoLayer == null)
                     {
                         // Streaming was disabled, exit loop
@@ -1265,7 +1317,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
             }
         }, cancellationToken);
-        
+
         // Notify UI that streaming has started
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
@@ -1294,12 +1346,12 @@ public partial class MainWindowViewModel : ViewModelBase
             }
             _streamingTask = null;
         }
-        
+
         lock (_streamingLock)
         {
             IsStreamingPaused = false;
         }
-        
+
         NotifyStreamingStateChanged();
     }
 }
@@ -1308,6 +1360,6 @@ public class LayerTypeItem
 {
     public string LayerTypeId { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
-    
+
     public override string ToString() => DisplayName;
 }

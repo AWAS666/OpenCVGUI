@@ -31,6 +31,21 @@
                                Source="{Binding DisplayImage}" 
                                Stretch="None"
                                RenderTransformOrigin="0.5,0.5">
+                            <Image.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Copy Image"
+                                              Command="{Binding CopyImageToClipboardCommand}"
+                                              IsEnabled="{Binding CanCopyImageToClipboard}">
+                                        <MenuItem.Icon>
+                                            <lucideAvalonia:Lucide Icon="Copy" 
+                                                                   StrokeBrush="White" 
+                                                                   StrokeThickness="1.5" 
+                                                                   Width="16" 
+                                                                   Height="16"/>
+                                        </MenuItem.Icon>
+                                    </MenuItem>
+                                </ContextMenu>
+                            </Image.ContextMenu>
                             <Image.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform ScaleX="{Binding ZoomLevel}" 
