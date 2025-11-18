@@ -108,7 +108,7 @@ public class ColorMatchLayer : BaseLayer
                 break;
         }
 
-        if(renderMode == RenderMode.UI)
+        if(renderMode == RenderMode.UI && chainInput != null)
         {
             Mat overlay = new Mat(chainInput.Size(), chainInput.Type(), new Scalar(0, 255, 0));
             overlay.CopyTo(chainInput, mask);
@@ -120,7 +120,6 @@ public class ColorMatchLayer : BaseLayer
         targetMat.Dispose();
         targetHsvMat.Dispose();
         mask.Dispose();
-
         return result;
     }
 }
