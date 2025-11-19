@@ -34,6 +34,7 @@ public partial class LayerViewModel : ViewModelBase
             {
                 _layer.Name = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(DisplayName));
             }
         }
     }
