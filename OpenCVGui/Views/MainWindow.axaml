@@ -33,6 +33,9 @@
                 <MenuItem Header="Load Chain" InputGesture="Ctrl+O"
                           Command="{Binding LoadChainCommand}"
                           HotKey="Ctrl+O"/>
+                <Separator/>
+                <MenuItem Header="Clear" 
+                          Command="{Binding ClearChainCommand}"/>
             </MenuItem>
             <MenuItem Command="{Binding SetRenderModeCommand}"
                         CommandParameter="UI"

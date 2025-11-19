@@ -1025,6 +1025,31 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private void ClearChain()
+    {
+        StopStreaming();
+        _layerChain.Clear();
+        Layers.Clear();
+        SelectedLayer = null;
+        PinnedLayer = null;
+        
+        _sourceImage?.Dispose();
+        _sourceImage = null;
+        
+        DisplayImage = null;
+        
+        SessionManager.ClearSession();
+        
+        RemoveLayerCommand.NotifyCanExecuteChanged();
+        ResetLayerToDefaultsCommand.NotifyCanExecuteChanged();
+        PinLayerCommand.NotifyCanExecuteChanged();
+        UnpinLayerCommand.NotifyCanExecuteChanged();
+        CopyImageToClipboardCommand.NotifyCanExecuteChanged();
+        
+        RenderChain();
+    }
+
     private void AddLayerToChain(BaseLayer layer, bool renderAfter = true)
     {
         _layerChain.AddLayer(layer);
