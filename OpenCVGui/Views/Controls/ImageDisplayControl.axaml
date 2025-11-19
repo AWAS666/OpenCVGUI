@@ -163,6 +163,7 @@
                 <Button Command="{Binding StepFrameBackwardCommand}"
                         ToolTip.Tip="Step Backward One Frame"
                         Padding="8"
+                        HotKey="Left"
                         IsVisible="{Binding CanStepFrames}">
                     <lucideAvalonia:Lucide Icon="ArrowLeftToLine" 
                                            StrokeBrush="White" 
@@ -175,6 +176,7 @@
                 <Button Command="{Binding StepFrameForwardCommand}"
                         ToolTip.Tip="Step Forward One Frame"
                         Padding="8"
+                        HotKey="Right"
                         IsVisible="{Binding CanStepFrames}">
                     <lucideAvalonia:Lucide Icon="ArrowRightToLine" 
                                            StrokeBrush="White" 
@@ -187,6 +189,7 @@
                 <Button Command="{Binding ToggleStreamingPauseCommand}"
                         ToolTip.Tip="{Binding PauseButtonTooltip}"
                         Padding="8"
+                        HotKey="Space"
                         IsVisible="{Binding IsStreamingActive}">
                     <lucideAvalonia:Lucide Icon="Pause" 
                                            StrokeBrush="White" 
