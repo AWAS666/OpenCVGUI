@@ -234,12 +234,12 @@ public partial class HistogramWindow : Avalonia.Controls.Window
         {
             int y = plotEndY - (plotHeight * i / numYLabels);
             int value;
-
+            
             if (viewModel.UseLogScale && viewModel.MaxValue > 0)
             {
                 double ratio = (double)i / numYLabels;
                 double logMax = Math.Log10(viewModel.MaxValue + 1);
-                double logValue = logMax * (1.0 - ratio);
+                double logValue = logMax * ratio;
                 value = (int)(Math.Pow(10, logValue) - 1);
                 if (value < 0) value = 0;
             }
@@ -247,15 +247,15 @@ public partial class HistogramWindow : Avalonia.Controls.Window
             {
                 value = (int)(viewModel.MaxValue * i / numYLabels);
             }
-
+            
             string label = value.ToString();
-
+            
             var textSize = Cv2.GetTextSize(label, HersheyFonts.HersheySimplex, 0.5, 1, out int baseline);
             int textX = plotStartX - textSize.Width - 5;
             int textY = y + textSize.Height / 2;
-
+            
             Cv2.PutText(histogramMat, label, new Point(textX, textY), HersheyFonts.HersheySimplex, 0.5, textColor, 1);
-
+            
             if (i > 0 && i < numYLabels)
             {
                 Cv2.Line(histogramMat, new Point(plotStartX, y), new Point(plotStartX - 5, y), textColor, 1);
