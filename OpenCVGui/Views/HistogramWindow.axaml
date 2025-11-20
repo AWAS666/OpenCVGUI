@@ -75,13 +75,10 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <CheckBox IsChecked="{Binding IsVisible}"
+                                  Content="{Binding Name}"
+                                  Background="{Binding Color}"
                                   VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                <Rectangle Width="16" 
-                                          Height="16" 
-                                          Fill="{Binding Color}"/>
-                                <TextBlock Text="{Binding Name}"/>
-                            </StackPanel>
+
                         </CheckBox>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
