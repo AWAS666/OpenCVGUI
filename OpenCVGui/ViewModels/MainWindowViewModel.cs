@@ -565,9 +565,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool CanCopyImageToClipboard => DisplayImage != null;
 
+    public bool CanShowHistogram => DisplayImage != null;
+
     partial void OnDisplayImageChanged(Bitmap? value)
     {
         CopyImageToClipboardCommand.NotifyCanExecuteChanged();
+        ShowHistogramCommand.NotifyCanExecuteChanged();
+        UpdateHistogramWindows();
     }
 
     [RelayCommand]
@@ -643,6 +647,111 @@ public partial class MainWindowViewModel : ViewModelBase
                 System.Diagnostics.Debug.WriteLine($"Error exporting image: {ex.Message}");
             }
         }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanShowHistogram))]
+    private void ShowHistogram()
+    {
+        if (DisplayImage == null)
+            return;
+
+        try
+        {
+            Mat? currentImage = GetCurrentImageMat();
+            if (currentImage == null || currentImage.Empty())
+            {
+                currentImage?.Dispose();
+                return;
+            }
+
+            var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+            if (windows != null)
+            {
+                var existingWindow = windows.Windows.OfType<OpenCVGui.Views.HistogramWindow>().FirstOrDefault();
+                if (existingWindow != null)
+                {
+                    existingWindow.UpdateHistogram(currentImage);
+                    currentImage.Dispose();
+                    existingWindow.Activate();
+                    return;
+                }
+
+                var histogramViewModel = new HistogramViewModel();
+                histogramViewModel.CalculateHistogram(currentImage);
+                currentImage.Dispose();
+
+                var window = new OpenCVGui.Views.HistogramWindow
+                {
+                    DataContext = histogramViewModel,
+                    WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
+                };
+                window.SetMainViewModel(this);
+
+                var mainWindow = windows.MainWindow;
+                if (mainWindow != null)
+                {
+                    window.Show(mainWindow);
+                }
+                else
+                {
+                    window.Show();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error showing histogram: {ex.Message}");
+        }
+    }
+
+    private Mat? GetCurrentImageMat()
+    {
+        Mat? currentImage = null;
+        
+        var layerToRender = PinnedLayer ?? SelectedLayer;
+        if (layerToRender != null)
+        {
+            var layerIndex = Layers.IndexOf(layerToRender);
+            if (layerIndex >= 0)
+            {
+                currentImage = _layerChain.RenderUpTo(layerIndex, _sourceImage, RenderMode.Chain);
+            }
+        }
+        else if (_sourceImage != null)
+        {
+            currentImage = _sourceImage.Clone();
+        }
+        else if (_layerChain.Count > 0)
+        {
+            currentImage = _layerChain.RenderChain(_sourceImage, RenderMode.Chain);
+        }
+
+        return currentImage;
+    }
+
+    public void UpdateHistogramWindows()
+    {
+        var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+        if (windows == null)
+            return;
+
+        var histogramWindows = windows.Windows.OfType<OpenCVGui.Views.HistogramWindow>().ToList();
+        if (histogramWindows.Count == 0)
+            return;
+
+        Mat? currentImage = GetCurrentImageMat();
+        if (currentImage == null || currentImage.Empty())
+        {
+            currentImage?.Dispose();
+            return;
+        }
+
+        foreach (var window in histogramWindows)
+        {
+            window.UpdateHistogram(currentImage);
+        }
+
+        currentImage.Dispose();
     }
 
     [ObservableProperty]

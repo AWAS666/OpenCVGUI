@@ -65,6 +65,10 @@
                     </StackPanel>
                 </MenuItem.Header>
             </MenuItem>
+            <MenuItem Header="Tools">
+                <MenuItem Header="Show Histogram" 
+                          Command="{Binding ShowHistogramCommand}"/>
+            </MenuItem>
         </Menu>
 
         <!-- Main Content Area -->
