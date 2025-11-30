@@ -8,5 +8,6 @@ better picker ui with name/description/category
 using pattern instead of dispose whereever possible
 reset to default button -> reinit layer instance with base class
 crop not working on zoomed in
+fix feature match
 
 implement further opencv layers -> check
