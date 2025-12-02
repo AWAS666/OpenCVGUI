@@ -270,29 +270,19 @@ public partial class HistogramWindow : Avalonia.Controls.Window
 
     private void HistogramOverlay_PointerMoved(object? sender, Avalonia.Input.PointerEventArgs e)
     {
-        if (DataContext is not HistogramViewModel viewModel || HistogramOverlay == null || HistogramImage == null)
+        if (DataContext is not HistogramViewModel viewModel || HistogramOverlay == null)
             return;
 
         if (viewModel.Channels.Count == 0 || viewModel.MaxValue == 0)
             return;
 
         var position = e.GetPosition(HistogramOverlay);
-        var imageBounds = HistogramImage.Bounds;
 
-        if (imageBounds.Width <= 0 || imageBounds.Height <= 0)
-            return;
-
-        if (position.X < 0 || position.X > imageBounds.Width || position.Y < 0 || position.Y > imageBounds.Height)
+        if (position.X < 0 || position.X > HistogramWidth || position.Y < 0 || position.Y > HistogramHeight)
         {
             UpdateHoverDisplay(null, null, viewModel);
             return;
         }
-
-        double scaleX = (double)HistogramWidth / imageBounds.Width;
-        double scaleY = (double)HistogramHeight / imageBounds.Height;
-
-        double relativeX = position.X * scaleX;
-        double relativeY = position.Y * scaleY;
 
         int plotWidth = HistogramWidth - LeftPadding - RightPadding;
         int plotHeight = HistogramHeight - TopPadding - BottomPadding;
@@ -301,14 +291,14 @@ public partial class HistogramWindow : Avalonia.Controls.Window
         int plotEndX = plotStartX + plotWidth;
         int plotEndY = plotStartY + plotHeight;
 
-        if (relativeX < plotStartX || relativeX > plotEndX || relativeY < plotStartY || relativeY > plotEndY)
+        if (position.X < plotStartX || position.X > plotEndX || position.Y < plotStartY || position.Y > plotEndY)
         {
             UpdateHoverDisplay(null, null, viewModel);
             return;
         }
 
-        double plotX = relativeX - plotStartX;
-        double plotY = relativeY - plotStartY;
+        double plotX = position.X - plotStartX;
+        double plotY = position.Y - plotStartY;
 
         if (viewModel.Channels.Count == 0 || viewModel.Channels[0].Values.Length == 0)
             return;

@@ -33,13 +33,19 @@
                     BorderThickness="1"
                     Background="#1E1E1E"
                     Padding="10">
-                <Grid>
-                    <Image x:Name="HistogramImage"
-                           Stretch="Uniform"/>
-                    <Canvas x:Name="HistogramOverlay"
-                            Background="Transparent"
-                            IsHitTestVisible="True"/>
-                </Grid>
+                <Viewbox Stretch="Uniform">
+                    <Grid Width="800" Height="500">
+                        <Image x:Name="HistogramImage"
+                               Width="800"
+                               Height="500"
+                               Stretch="None"/>
+                        <Canvas x:Name="HistogramOverlay"
+                                Width="800"
+                                Height="500"
+                                Background="Transparent"
+                                IsHitTestVisible="True"/>
+                    </Grid>
+                </Viewbox>
             </Border>
             
             <Border Grid.Column="1"
