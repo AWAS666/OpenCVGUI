@@ -22,22 +22,28 @@ public partial class PatternLearningControlViewModel : ViewModelBase
     private readonly LayerViewModel _layerViewModel;
     private PatternLearningLayer? _layer;
     private IFileDialogService? _fileDialogService;
-    private readonly ImageViewportService _viewportService = new();
+    private readonly ImageViewportViewModel _viewport = new();
     private readonly CropService _cropService = new();
     private Mat? _sourceImage;
     private List<Mat> _sourceImages = new();
     private int _currentImageIndex = -1;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTrain))]
+    [NotifyPropertyChangedFor(nameof(PositiveSampleThumbnails))]
     private int _positiveSampleCount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTrain))]
+    [NotifyPropertyChangedFor(nameof(NegativeSampleThumbnails))]
     private int _negativeSampleCount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TestSampleThumbnails))]
     private int _testSampleCount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTrain))]
     private bool _isTraining;
 
     [ObservableProperty]
@@ -66,30 +72,30 @@ public partial class PatternLearningControlViewModel : ViewModelBase
 
     public double ZoomLevel
     {
-        get => _viewportService.ZoomLevel;
+        get => _viewport.ZoomLevel;
         set
         {
-            _viewportService.ZoomLevel = value;
+            _viewport.ZoomLevel = value;
             OnPropertyChanged();
         }
     }
 
     public double PanX
     {
-        get => _viewportService.PanX;
+        get => _viewport.PanX;
         set
         {
-            _viewportService.PanX = value;
+            _viewport.PanX = value;
             OnPropertyChanged();
         }
     }
 
     public double PanY
     {
-        get => _viewportService.PanY;
+        get => _viewport.PanY;
         set
         {
-            _viewportService.PanY = value;
+            _viewport.PanY = value;
             OnPropertyChanged();
         }
     }
@@ -203,47 +209,22 @@ public partial class PatternLearningControlViewModel : ViewModelBase
     [RelayCommand]
     private async Task BrowsePositiveSamplesPathAsync()
     {
-        if (_fileDialogService == null)
-            return;
-
-        var topLevel = _fileDialogService.GetTopLevel();
-        if (topLevel == null)
-            return;
-
-        var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "Select Positive Samples Directory"
-        });
-
-        if (folder.Count > 0 && folder[0].TryGetLocalPath() is string path)
-        {
-            PositiveSamplesPath = path;
-        }
+        await BrowseFolderAsync("Select Positive Samples Directory", path => PositiveSamplesPath = path);
     }
 
     [RelayCommand]
     private async Task BrowseNegativeSamplesPathAsync()
     {
-        if (_fileDialogService == null)
-            return;
-
-        var topLevel = _fileDialogService.GetTopLevel();
-        if (topLevel == null)
-            return;
-
-        var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = "Select Negative Samples Directory"
-        });
-
-        if (folder.Count > 0 && folder[0].TryGetLocalPath() is string path)
-        {
-            NegativeSamplesPath = path;
-        }
+        await BrowseFolderAsync("Select Negative Samples Directory", path => NegativeSamplesPath = path);
     }
 
     [RelayCommand]
     private async Task BrowseTestSamplesPathAsync()
+    {
+        await BrowseFolderAsync("Select Test Samples Directory", path => TestSamplesPath = path);
+    }
+
+    private async Task BrowseFolderAsync(string title, Action<string> setPath)
     {
         if (_fileDialogService == null)
             return;
@@ -254,12 +235,12 @@ public partial class PatternLearningControlViewModel : ViewModelBase
 
         var folder = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Select Test Samples Directory"
+            Title = title
         });
 
         if (folder.Count > 0 && folder[0].TryGetLocalPath() is string path)
         {
-            TestSamplesPath = path;
+            setPath(path);
         }
     }
 
@@ -323,21 +304,12 @@ public partial class PatternLearningControlViewModel : ViewModelBase
 
     partial void OnPositiveSampleCountChanged(int value)
     {
-        OnPropertyChanged(nameof(CanTrain));
         TrainModelCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(PositiveSampleThumbnails));
     }
 
     partial void OnNegativeSampleCountChanged(int value)
     {
-        OnPropertyChanged(nameof(CanTrain));
         TrainModelCommand.NotifyCanExecuteChanged();
-        OnPropertyChanged(nameof(NegativeSampleThumbnails));
-    }
-
-    partial void OnTestSampleCountChanged(int value)
-    {
-        OnPropertyChanged(nameof(TestSampleThumbnails));
     }
 
     [RelayCommand(CanExecute = nameof(CanNavigatePrevious))]
@@ -446,14 +418,14 @@ public partial class PatternLearningControlViewModel : ViewModelBase
     [RelayCommand]
     private void ZoomIn()
     {
-        _viewportService.ZoomIn();
+        _viewport.ZoomInCommand.Execute(null);
         OnPropertyChanged(nameof(ZoomLevel));
     }
 
     [RelayCommand]
     private void ZoomOut()
     {
-        _viewportService.ZoomOut();
+        _viewport.ZoomOutCommand.Execute(null);
         OnPropertyChanged(nameof(ZoomLevel));
     }
 
@@ -463,7 +435,7 @@ public partial class PatternLearningControlViewModel : ViewModelBase
         if (DisplayImage == null)
             return;
 
-        _viewportService.FitToView();
+        _viewport.FitToViewCommand.Execute(null);
         OnPropertyChanged(nameof(ZoomLevel));
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
@@ -496,8 +468,9 @@ public partial class PatternLearningControlViewModel : ViewModelBase
         if (DisplayImage == null)
             return;
 
+        _viewport.DisplayImage = DisplayImage;
         var oldZoom = ZoomLevel;
-        _viewportService.ZoomAtPoint(delta, x, y, DisplayImage);
+        _viewport.ZoomAtPoint(delta, x, y);
 
         if (Math.Abs(ZoomLevel - oldZoom) > 0.001)
         {
@@ -509,7 +482,7 @@ public partial class PatternLearningControlViewModel : ViewModelBase
 
     public void PanImage(double deltaX, double deltaY)
     {
-        _viewportService.PanImage(deltaX, deltaY);
+        _viewport.PanImage(deltaX, deltaY);
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
     }
@@ -736,99 +709,41 @@ public partial class PatternLearningControlViewModel : ViewModelBase
 
     partial void OnIsTrainingChanged(bool value)
     {
-        OnPropertyChanged(nameof(CanTrain));
         TrainModelCommand.NotifyCanExecuteChanged();
     }
 
 
-    public List<Bitmap> PositiveSampleThumbnails
-    {
-        get
-        {
-            var thumbnails = new List<Bitmap>();
-            if (_layer?.PositiveSamplesBase64 != null)
-            {
-                foreach (var base64 in _layer.PositiveSamplesBase64)
-                {
-                    try
-                    {
-                        byte[] imageBytes = Convert.FromBase64String(base64);
-                        Mat image = Cv2.ImDecode(imageBytes, ImreadModes.Color);
-                        if (!image.Empty())
-                        {
-                            var thumbnail = CreateThumbnail(image, 100);
-                            thumbnails.Add(thumbnail);
-                            image.Dispose();
-                        }
-                    }
-                    catch
-                    {
-                        // Skip invalid base64 strings
-                    }
-                }
-            }
-            return thumbnails;
-        }
-    }
+    public List<Bitmap> PositiveSampleThumbnails => GenerateThumbnails(_layer?.PositiveSamplesBase64);
 
-    public List<Bitmap> NegativeSampleThumbnails
-    {
-        get
-        {
-            var thumbnails = new List<Bitmap>();
-            if (_layer?.NegativeSamplesBase64 != null)
-            {
-                foreach (var base64 in _layer.NegativeSamplesBase64)
-                {
-                    try
-                    {
-                        byte[] imageBytes = Convert.FromBase64String(base64);
-                        Mat image = Cv2.ImDecode(imageBytes, ImreadModes.Color);
-                        if (!image.Empty())
-                        {
-                            var thumbnail = CreateThumbnail(image, 100);
-                            thumbnails.Add(thumbnail);
-                            image.Dispose();
-                        }
-                    }
-                    catch
-                    {
-                        // Skip invalid base64 strings
-                    }
-                }
-            }
-            return thumbnails;
-        }
-    }
+    public List<Bitmap> NegativeSampleThumbnails => GenerateThumbnails(_layer?.NegativeSamplesBase64);
 
-    public List<Bitmap> TestSampleThumbnails
+    public List<Bitmap> TestSampleThumbnails => GenerateThumbnails(_layer?.TestSamplesBase64);
+
+    private List<Bitmap> GenerateThumbnails(IEnumerable<string>? base64Samples)
     {
-        get
+        var thumbnails = new List<Bitmap>();
+        if (base64Samples == null)
+            return thumbnails;
+
+        foreach (var base64 in base64Samples)
         {
-            var thumbnails = new List<Bitmap>();
-            if (_layer?.TestSamplesBase64 != null)
+            try
             {
-                foreach (var base64 in _layer.TestSamplesBase64)
+                byte[] imageBytes = Convert.FromBase64String(base64);
+                Mat image = Cv2.ImDecode(imageBytes, ImreadModes.Color);
+                if (!image.Empty())
                 {
-                    try
-                    {
-                        byte[] imageBytes = Convert.FromBase64String(base64);
-                        Mat image = Cv2.ImDecode(imageBytes, ImreadModes.Color);
-                        if (!image.Empty())
-                        {
-                            var thumbnail = CreateThumbnail(image, 100);
-                            thumbnails.Add(thumbnail);
-                            image.Dispose();
-                        }
-                    }
-                    catch
-                    {
-                        // Skip invalid base64 strings
-                    }
+                    var thumbnail = CreateThumbnail(image, 100);
+                    thumbnails.Add(thumbnail);
+                    image.Dispose();
                 }
             }
-            return thumbnails;
+            catch
+            {
+                // Skip invalid base64 strings
+            }
         }
+        return thumbnails;
     }
 
     private Bitmap CreateThumbnail(Mat image, int maxSize)

@@ -27,7 +27,7 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly LayerChain _layerChain = new();
     private readonly IFileDialogService _fileDialogService;
-    private readonly ImageViewportService _viewportService;
+    private readonly ImageViewportViewModel _viewport = new();
     private readonly CropService _cropService;
     private Mat? _sourceImage;
     private CancellationTokenSource? _streamingCancellationTokenSource;
@@ -103,33 +103,45 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public double ZoomLevel
     {
-        get => _viewportService.ZoomLevel;
-        set => _viewportService.ZoomLevel = value;
+        get => _viewport.ZoomLevel;
+        set
+        {
+            _viewport.ZoomLevel = value;
+            OnPropertyChanged();
+        }
     }
 
     public double PanX
     {
-        get => _viewportService.PanX;
-        set => _viewportService.PanX = value;
+        get => _viewport.PanX;
+        set
+        {
+            _viewport.PanX = value;
+            OnPropertyChanged();
+        }
     }
 
     public double PanY
     {
-        get => _viewportService.PanY;
-        set => _viewportService.PanY = value;
+        get => _viewport.PanY;
+        set
+        {
+            _viewport.PanY = value;
+            OnPropertyChanged();
+        }
     }
 
     [RelayCommand]
     private void ZoomIn()
     {
-        _viewportService.ZoomIn();
+        _viewport.ZoomInCommand.Execute(null);
         OnPropertyChanged(nameof(ZoomLevel));
     }
 
     [RelayCommand]
     private void ZoomOut()
     {
-        _viewportService.ZoomOut();
+        _viewport.ZoomOutCommand.Execute(null);
         OnPropertyChanged(nameof(ZoomLevel));
     }
 
@@ -139,7 +151,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (DisplayImage == null)
             return;
 
-        _viewportService.FitToView();
+        _viewport.FitToViewCommand.Execute(null);
         OnPropertyChanged(nameof(ZoomLevel));
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
@@ -150,8 +162,9 @@ public partial class MainWindowViewModel : ViewModelBase
         if (DisplayImage == null)
             return;
 
+        _viewport.DisplayImage = DisplayImage;
         var oldZoom = ZoomLevel;
-        _viewportService.ZoomAtPoint(delta, x, y, DisplayImage);
+        _viewport.ZoomAtPoint(delta, x, y);
 
         if (Math.Abs(ZoomLevel - oldZoom) > 0.001)
         {
@@ -163,7 +176,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void PanImage(double deltaX, double deltaY)
     {
-        _viewportService.PanImage(deltaX, deltaY);
+        _viewport.PanImage(deltaX, deltaY);
         OnPropertyChanged(nameof(PanX));
         OnPropertyChanged(nameof(PanY));
     }
@@ -183,36 +196,30 @@ public partial class MainWindowViewModel : ViewModelBase
         if (SelectedLayer == null || !SelectedLayer.HasCustomControl)
             return;
 
-        // Check if window already exists
-        var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-        if (windows != null)
+        if (!WindowService.IsDesktopMode)
+            return;
+
+        var existingWindow = WindowService.FindWindowByDataContext<OpenCVGui.Views.CustomControlWindow>(SelectedLayer);
+        if (existingWindow != null)
         {
-            var existingWindow = windows.Windows.OfType<OpenCVGui.Views.CustomControlWindow>()
-                .FirstOrDefault(w => w.DataContext == SelectedLayer);
+            existingWindow.Activate();
+            return;
+        }
 
-            if (existingWindow != null)
-            {
-                existingWindow.Activate();
-                return;
-            }
+        var window = new OpenCVGui.Views.CustomControlWindow
+        {
+            DataContext = SelectedLayer,
+            WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
+        };
 
-            // Create new window
-            var window = new OpenCVGui.Views.CustomControlWindow
-            {
-                DataContext = SelectedLayer,
-                WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
-            };
-
-            // Set owner to main window
-            var mainWindow = windows.MainWindow;
-            if (mainWindow != null)
-            {
-                window.Show(mainWindow);
-            }
-            else
-            {
-                window.Show();
-            }
+        var mainWindow = WindowService.MainWindow;
+        if (mainWindow != null)
+        {
+            window.Show(mainWindow);
+        }
+        else
+        {
+            window.Show();
         }
     }
 
@@ -530,9 +537,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         try
         {
-            var appLifetime = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-            var mainWindow = appLifetime?.MainWindow;
-
+            var mainWindow = WindowService.MainWindow;
             if (mainWindow == null)
                 return;
             var topLevel = TopLevel.GetTopLevel(mainWindow);
@@ -664,38 +669,39 @@ public partial class MainWindowViewModel : ViewModelBase
                 return;
             }
 
-            var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-            if (windows != null)
+            if (!WindowService.IsDesktopMode)
             {
-                var existingWindow = windows.Windows.OfType<OpenCVGui.Views.HistogramWindow>().FirstOrDefault();
-                if (existingWindow != null)
-                {
-                    existingWindow.UpdateHistogram(currentImage);
-                    currentImage.Dispose();
-                    existingWindow.Activate();
-                    return;
-                }
-
-                var histogramViewModel = new HistogramViewModel();
-                histogramViewModel.CalculateHistogram(currentImage);
                 currentImage.Dispose();
+                return;
+            }
 
-                var window = new OpenCVGui.Views.HistogramWindow
-                {
-                    DataContext = histogramViewModel,
-                    WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
-                };
-                window.SetMainViewModel(this);
+            var existingWindow = WindowService.FindWindow<OpenCVGui.Views.HistogramWindow>();
+            if (existingWindow != null)
+            {
+                existingWindow.UpdateHistogram(currentImage);
+                currentImage.Dispose();
+                existingWindow.Activate();
+                return;
+            }
 
-                var mainWindow = windows.MainWindow;
-                if (mainWindow != null)
-                {
-                    window.Show(mainWindow);
-                }
-                else
-                {
-                    window.Show();
-                }
+            var histogramViewModel = new HistogramViewModel();
+            histogramViewModel.CalculateHistogram(currentImage);
+            currentImage.Dispose();
+
+            var window = new OpenCVGui.Views.HistogramWindow
+            {
+                DataContext = histogramViewModel,
+                WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
+            };
+
+            var mainWindow = WindowService.MainWindow;
+            if (mainWindow != null)
+            {
+                window.Show(mainWindow);
+            }
+            else
+            {
+                window.Show();
             }
         }
         catch (Exception ex)
@@ -731,11 +737,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public void UpdateHistogramWindows()
     {
-        var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-        if (windows == null)
-            return;
-
-        var histogramWindows = windows.Windows.OfType<OpenCVGui.Views.HistogramWindow>().ToList();
+        var histogramWindows = WindowService.FindWindows<OpenCVGui.Views.HistogramWindow>().ToList();
         if (histogramWindows.Count == 0)
             return;
 
@@ -780,14 +782,13 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    public MainWindowViewModel() : this(new FileDialogService(), new ImageViewportService(), new CropService())
+    public MainWindowViewModel() : this(new FileDialogService(), new CropService())
     {
     }
 
-    public MainWindowViewModel(IFileDialogService fileDialogService, ImageViewportService viewportService, CropService cropService)
+    public MainWindowViewModel(IFileDialogService fileDialogService, CropService cropService)
     {
         _fileDialogService = fileDialogService;
-        _viewportService = viewportService;
         _cropService = cropService;
 
         // Initialize layer factory

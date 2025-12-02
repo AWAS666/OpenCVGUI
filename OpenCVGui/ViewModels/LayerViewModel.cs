@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using OpenCVGui.Lib;
 using OpenCVGui.Lib.Attributes;
 using System;
@@ -173,19 +172,6 @@ public partial class LayerViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(LastRuntime));
         OnPropertyChanged(nameof(HasError));
-    }
-
-    [RelayCommand]
-    private void CloseCustomControlWindow()
-    {
-        // Find and close the custom control window if it exists
-        var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-        if (windows != null)
-        {
-            var customWindow = windows.Windows.OfType<OpenCVGui.Views.CustomControlWindow>()
-                .FirstOrDefault(w => w.DataContext == this);
-            customWindow?.Close();
-        }
     }
 }
 

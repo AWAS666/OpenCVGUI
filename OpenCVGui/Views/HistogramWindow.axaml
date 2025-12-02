@@ -38,7 +38,8 @@
                         <Image x:Name="HistogramImage"
                                Width="800"
                                Height="500"
-                               Stretch="None"/>
+                               Stretch="None"
+                               Source="{Binding HistogramBitmap}"/>
                         <Canvas x:Name="HistogramOverlay"
                                 Width="800"
                                 Height="500"
@@ -54,8 +55,7 @@
                     Background="#1E1E1E"
                     Padding="10">
                 <ScrollViewer>
-                    <TextBlock x:Name="HoverValueText"
-                               Text="Hover over the chart to see values"
+                    <TextBlock Text="{Binding HoverText}"
                                TextWrapping="Wrap"
                                Foreground="#E0E0E0"/>
                 </ScrollViewer>

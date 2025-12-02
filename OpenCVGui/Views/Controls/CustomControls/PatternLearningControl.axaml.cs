@@ -2,7 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
+using OpenCVGui.Services;
 using OpenCVGui.ViewModels.Custom;
 
 namespace OpenCVGui.Views.Controls.CustomControls;
@@ -37,24 +37,11 @@ public partial class PatternLearningControl : UserControl
     {
         if (DataContext is PatternLearningControlViewModel viewModel)
         {
-            // Set up file dialog service from parent window
-            var parent = this.Parent;
-            while (parent != null)
+            if (WindowService.MainWindow?.DataContext is OpenCVGui.ViewModels.MainWindowViewModel mainViewModel)
             {
-                if (parent is Window window && window.DataContext is OpenCVGui.ViewModels.LayerViewModel layerViewModel)
-                {
-                    // Try to get file dialog service from main window
-                    var windows = Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-                    if (windows?.MainWindow?.DataContext is OpenCVGui.ViewModels.MainWindowViewModel mainViewModel)
-                    {
-                        viewModel.SetFileDialogService(mainViewModel.GetFileDialogService());
-                    }
-                    break;
-                }
-                parent = parent.Parent;
+                viewModel.SetFileDialogService(mainViewModel.GetFileDialogService());
             }
 
-            // Subscribe to crop mode changes
             viewModel.PropertyChanged += (s, args) =>
             {
                 if (args.PropertyName == nameof(PatternLearningControlViewModel.IsCropMode))
