@@ -1,5 +1,6 @@
 using OpenCvSharp;
 using OpenCVGui.Lib.Attributes;
+using System.Diagnostics;
 
 namespace OpenCVGui.Lib.Import;
 
@@ -38,7 +39,7 @@ public class WebcamLayer : BaseLayer
         if (_videoCapture == null || _lastDeviceIndex != DeviceIndex)
         {
             ReleaseVideoCapture();
-            
+
             _videoCapture = new VideoCapture(DeviceIndex);
             _lastDeviceIndex = DeviceIndex;
 
@@ -71,11 +72,18 @@ public class WebcamLayer : BaseLayer
 
     private void ReleaseVideoCapture()
     {
-        if (_videoCapture != null)
+        try
         {
-            _videoCapture.Release();
-            _videoCapture.Dispose();
-            _videoCapture = null;
+            if (_videoCapture != null)
+            {
+                _videoCapture.Release();
+                _videoCapture.Dispose();
+                _videoCapture = null;
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine($"Failed video cleanup: {e.Message}");
         }
     }
 
