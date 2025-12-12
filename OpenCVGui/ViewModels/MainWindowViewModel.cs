@@ -20,6 +20,7 @@ using Avalonia;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Microsoft.VisualBasic;
+using System.Diagnostics;
 
 namespace OpenCVGui.ViewModels;
 
@@ -667,22 +668,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 currentImage?.Dispose();
                 return;
-            }
-
-            if (!WindowService.IsDesktopMode)
-            {
-                currentImage.Dispose();
-                return;
-            }
-
-            var existingWindow = WindowService.FindWindow<OpenCVGui.Views.HistogramWindow>();
-            if (existingWindow != null)
-            {
-                existingWindow.UpdateHistogram(currentImage);
-                currentImage.Dispose();
-                existingWindow.Activate();
-                return;
-            }
+            }     
 
             var histogramViewModel = new HistogramViewModel();
             histogramViewModel.CalculateHistogram(currentImage);
@@ -691,7 +677,6 @@ public partial class MainWindowViewModel : ViewModelBase
             var window = new OpenCVGui.Views.HistogramWindow
             {
                 DataContext = histogramViewModel,
-                WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.CenterOwner
             };
 
             var mainWindow = WindowService.MainWindow;
@@ -706,7 +691,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error showing histogram: {ex.Message}");
+           Debug.WriteLine($"Error showing histogram: {ex.Message}");
         }
     }
 

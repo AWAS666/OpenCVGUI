@@ -444,7 +444,7 @@ public partial class HistogramViewModel : ViewModelBase
     }
 }
 
-public partial class HistogramChannel : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
+public partial class HistogramChannel : ObservableObject
 {
     [ObservableProperty]
     private string _name = string.Empty;
