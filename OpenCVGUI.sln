@@ -1,10 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.0.11222.15 d18.0
+VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCVGUITest", "OpenCVGUITest\OpenCVGUITest.csproj", "{8E9A7F2F-F9EE-21A9-C487-6539624F417C}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCVGui", "OpenCVGui\OpenCVGui.csproj", "{2C63B5CE-3D88-4549-9742-A05FD24BF3A7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenCVGui.Lib", "OpenCVGui.Lib\OpenCVGui.Lib.csproj", "{1482BDD1-F37F-427E-B080-18F5B4D5AEC6}"
@@ -22,10 +20,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8E9A7F2F-F9EE-21A9-C487-6539624F417C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E9A7F2F-F9EE-21A9-C487-6539624F417C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E9A7F2F-F9EE-21A9-C487-6539624F417C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E9A7F2F-F9EE-21A9-C487-6539624F417C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2C63B5CE-3D88-4549-9742-A05FD24BF3A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2C63B5CE-3D88-4549-9742-A05FD24BF3A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C63B5CE-3D88-4549-9742-A05FD24BF3A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
