@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Background layer (largest) - Dark blue -->
+  <rect x="32" y="32" width="192" height="192" rx="8" fill="#1E40AF"/>
+  
+  <!-- Middle layer - Medium blue -->
+  <rect x="48" y="48" width="160" height="160" rx="8" fill="#3B82F6"/>
+  
+  <!-- Top layer (smallest) - Light blue -->
+  <rect x="64" y="64" width="128" height="128" rx="8" fill="#60A5FA"/>
+  
+  <!-- Image processing representation: grid pattern - White -->
+  <g stroke="#FFFFFF" stroke-width="3" stroke-linecap="round">
+    <!-- Horizontal lines -->
+    <line x1="80" y1="96" x2="176" y2="96"/>
+    <line x1="80" y1="128" x2="176" y2="128"/>
+    <line x1="80" y1="160" x2="176" y2="160"/>
+    
+    <!-- Vertical lines -->
+    <line x1="112" y1="80" x2="112" y2="176"/>
+    <line x1="144" y1="80" x2="144" y2="176"/>
+  </g>
+  
+  <!-- Center circle representing vision/processing - White -->
+  <circle cx="128" cy="128" r="16" fill="#FFFFFF"/>
+</svg>
