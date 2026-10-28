@@ -1,13 +1,31 @@
-## Todo
-auto code gen
-translations
-better save file structure, zip
-user resize of layerlist to parameter view as well as viewsize
-debloat mainviewmodel
-better picker ui with name/description/category
-using pattern instead of dispose whereever possible
-reset to default button -> reinit layer instance with base class
-crop not working on zoomed in
-fix feature match
+# OpenCV GUI
 
-implement further opencv layers -> check
+Desktop app for chaining OpenCV image operations. Layers run in order; each one takes the previous layer's output. Chains save and load as XML.
+
+Windows only. The library uses the OpenCvSharp Windows runtime.
+
+## Requirements
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+
+## Run
+
+```
+dotnet run --project OpenCVGui
+```
+
+```
+dotnet test
+```
+
+## Layout
+
+- `OpenCVGui` — Avalonia UI (CommunityToolkit.Mvvm)
+- `OpenCVGui.Lib` — layers, chain, and XML serialization
+- `OpenCVGui.LibTests` — library tests
+
+## Adding a layer
+
+Subclass `BaseLayer` under `OpenCVGui.Lib`, implement `GetLayerType` and `RenderInternal`, and mark settings with `[Parameter]`. `LayerFactory` discovers concrete subclasses.
+
+Folders: `Import`, `Transform`, `Contour`, `Detection`, `Draw`.
